@@ -17,8 +17,10 @@ import os
 
 # Load environment variables from .env
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv()  # Load .env from the project root
 
+# ✅ Load .env from ENV_PATH (system environment) or default to project root
+ENV_PATH = os.getenv("SOPHI_ENV_PATH", BASE_DIR / ".env")
+load_dotenv(ENV_PATH)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
