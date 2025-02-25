@@ -1,3 +1,5 @@
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,6 +11,7 @@ from .serializers import UserSerializer
 
 
 # Login View
+@method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     permission_classes = [AllowAny]  # Allow access to anyone
 
