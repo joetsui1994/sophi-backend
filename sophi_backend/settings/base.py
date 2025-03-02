@@ -165,8 +165,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Simulated data
 MEDIA_URL = '/media/'  # Base URL for media files
-MEDIA_ROOT = BASE_DIR / 'media'  # Root directory for all uploaded files
-
+MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / 'media')  # Directory for media files
 SIMULATIONS_FOLDER = 'simulations/'  # Subdirectory for simulation data
 
 
