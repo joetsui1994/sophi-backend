@@ -68,7 +68,7 @@ class Simulation(models.Model):
         assert self.check_complete(), "Aborting: not all required fields have been populated"
 
         # generate unique name based on model attributes
-        new_name = f"dN({self.num_demes})|o({int(self.outbreak_origin)})|T({self.duration_days})|b({self.beta:.2f})|g({self.gamma:.2f})|d({self.delta:.2f})|"
+        new_name = f"dN({self.num_demes})|o({int(self.outbreak_origin)})|T({self.duration_days})|b({self.beta:.3f})|g({self.gamma:.3f})|d({self.delta:.3f})|"
         # check for duplicate names
         num_duplicate = Simulation.objects.exclude(name=self.name).filter(name__startswith=new_name).count()
         self.name = f"{new_name}{num_duplicate}"
