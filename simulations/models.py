@@ -3,6 +3,7 @@ from simulations.utilities.tree_process import read_nexus_tree, get_subsampled_t
 from django.conf import settings
 from django.db import models
 import pandas as pd
+import base64
 import uuid
 import os
 
@@ -22,12 +23,20 @@ def upload_xml_file_path(instance, filename):
     return os.path.join(settings.SIMULATIONS_FOLDER, str(instance.uuid), 'run.xml')
 
 
+# Function to generate a short UUID
+def generate_short_uuid(length=8):
+    """Generate a short UUID by encoding a UUID4 in Base62."""
+    uuid_bytes = uuid.uuid4().bytes  # Get the raw UUID bytes
+    short_uuid = base64.urlsafe_b64encode(uuid_bytes).decode('utf-8').rstrip('=')  # Base64 encode and strip padding
+    return short_uuid[:length]
+
+
 # Model for simulated outbreaks
 class Simulation(models.Model):
     """
     Model to store information about a simulated outbreak, including the name, description, parameters, and relevant input/output files.
     """
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    uuid = models.UUIDField(default=generate_short_uuid, editable=False, unique=True, primary_key=True)
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
