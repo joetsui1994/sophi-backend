@@ -68,7 +68,7 @@ class Simulation(models.Model):
         assert self.check_complete(), "Aborting: not all required fields have been populated"
 
         # generate unique name based on model attributes
-        new_name = f"dN({self.num_demes})|o({self.outbreak_origin})|T({self.duration_days})|b({self.beta:.2f})|g({self.gamma:.2f})|d({self.delta:.2f})|"
+        new_name = f"dN({self.num_demes})|o({int(self.outbreak_origin)})|T({self.duration_days})|b({self.beta:.2f})|g({self.gamma:.2f})|d({self.delta:.2f})|"
         # check for duplicate names
         num_duplicate = Simulation.objects.exclude(name=self.name).filter(name__startswith=new_name).count()
         self.name = f"{new_name}{num_duplicate}"
@@ -110,15 +110,15 @@ class Simulation(models.Model):
         global_attack_rate = total_infected / total_population
         global_sampling_rate = total_sampled / total_infected
         description_1 = (
-            f"Simulation of an outbreak (originating from deme {self.outbreak_origin}) with {self.num_demes} demes "
+            f"Simulation of an outbreak (originating from deme {int(self.outbreak_origin)}) with {self.num_demes} demes "
             f"(total population {'{:,}'.format(int(total_population))}) over "
-            f"{self.duration_days} days, with beta={self.beta}, gamma={self.gamma}, "
+            f"{'{:,}'.format(int(self.duration_days))} days, with beta={self.beta}, gamma={self.gamma}, "
             f"and delta={self.delta}"
         )
         description_2 = (
             f"By the end of the simulation, {global_attack_rate * 100:.1f}% "
-            f"(n={total_infected}) of the population had been infected, of whom "
-            f"{global_sampling_rate * 100:.1f}% (n={total_sampled}) were sampled and sequenced."
+            f"(n={'{:,}'.format(total_infected)}) of the population had been infected, of whom "
+            f"{global_sampling_rate * 100:.1f}% (n={'{:,}'.format(total_sampled)}) were sampled and sequenced."
         )
         self.description = f"{description_1} {description_2}"
         self.save()
