@@ -36,7 +36,7 @@ class Simulation(models.Model):
     """
     Model to store information about a simulated outbreak, including the name, description, parameters, and relevant input/output files.
     """
-    uuid = models.UUIDField(default=generate_short_uuid, editable=False, unique=True, primary_key=True)
+    uuid = models.CharField(default=generate_short_uuid, editable=False, unique=True, primary_key=True)
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
