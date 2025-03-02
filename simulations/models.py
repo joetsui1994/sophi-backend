@@ -112,8 +112,8 @@ class Simulation(models.Model):
         description_1 = (
             f"Simulation of an outbreak (originating from deme {int(self.outbreak_origin)}) with {self.num_demes} demes "
             f"(total population {'{:,}'.format(int(total_population))}) over "
-            f"{'{:,}'.format(int(self.duration_days))} days, with beta={self.beta}, gamma={self.gamma}, "
-            f"and delta={self.delta}."
+            f"{'{:,}'.format(int(self.duration_days))} days, with beta={self.beta:.2f}, gamma={self.gamma:.2f}, "
+            f"and delta={self.delta:.2f}."
         )
         description_2 = (
             f"By the end of the simulation, {global_attack_rate * 100:.1f}% "
