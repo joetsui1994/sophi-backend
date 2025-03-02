@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'accounts',
+    'simulations'
 ]
 
 REST_FRAMEWORK = {
@@ -160,3 +161,15 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Simulated data
+MEDIA_URL = '/media/'  # Base URL for media files
+MEDIA_ROOT = BASE_DIR / 'media'  # Root directory for all uploaded files
+
+SIMULATIONS_FOLDER = 'simulations/'  # Subdirectory for simulation data
+
+
+# Simulations pagination settings
+DEFAULT_PAGE_SIZE = 10
+MAX_PAGE_SIZE = 100
