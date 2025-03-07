@@ -16,7 +16,7 @@ import os
 
 
 # Load environment variables from .env
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Load .env from ENV_PATH (system environment) or default to project root
 ENV_PATH = os.getenv("SOPHI_ENV_PATH", BASE_DIR / ".env")
