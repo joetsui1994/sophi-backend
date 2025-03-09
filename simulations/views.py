@@ -28,18 +28,26 @@ class SimulationRepository(APIView, CustomSetPagination):
         ]))
 
     def get(self, request, format=None):
+        # get the search parameter from the query
+        search = request.query_params.get('search', None)
+        
         # get the ordering parameter from the query
         ordering = request.query_params.get('ordering', None)
         descending = request.query_params.get('descending', 'false').lower() == 'true'
         allowed_ordering_fields = ['beta', 'gamma', 'delta', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled']
 
-        # check if the ordering parameter is valid
+        # start with base queryset
+        simulation_queryset = Simulation.objects.filter(is_complete=True)
+
+        # apply search filter if search parameter exists
+        if search:
+            simulation_queryset = simulation_queryset.filter(uuid__startswith=search)
+
+        # apply ordering if valid
         if ordering in allowed_ordering_fields:
             if descending:
                 ordering = '-' + ordering
-            simulation_queryset = Simulation.objects.filter(is_complete=True).order_by(ordering)
-        else:
-            simulation_queryset = Simulation.objects.filter(is_complete=True)
+            simulation_queryset = simulation_queryset.order_by(ordering)
 
         # paginate the queryset
         page = self.paginate_queryset(simulation_queryset, request)
