@@ -24,4 +24,5 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('accounts/', include('accounts.urls')),
     path('simulations/', include('simulations.urls')),
+    path('inferences/', include('inferences.urls')),
 ]
