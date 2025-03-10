@@ -1,0 +1,26 @@
+{
+  "name": "d3_format_tree",
+  "version": "1.0.0",
+  "description": "format input tree using d3 engine and output XY json file",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Git",
+    "CLI"
+  ],
+  "author": "Joseph Tsui",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.0.1",
+    "clear": "^0.1.0",
+    "clui": "^0.3.6",
+    "d3": "^7.4.4",
+    "figlet": "^1.5.2",
+    "fs": "^0.0.1-security",
+    "minimist": "^1.2.6",
+    "yargs": "^17.5.1"
+  }
+}
