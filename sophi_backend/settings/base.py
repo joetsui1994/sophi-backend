@@ -173,3 +173,7 @@ SIMULATIONS_FOLDER = 'simulations/'  # Subdirectory for simulation data
 # Simulations pagination settings
 DEFAULT_PAGE_SIZE = 10
 MAX_PAGE_SIZE = 100
+
+
+# Inference data
+INFERENCE_FOLDER = 'inferences/'  # Subdirectory for inference results
