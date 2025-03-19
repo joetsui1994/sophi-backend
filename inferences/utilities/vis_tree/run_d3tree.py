@@ -1,4 +1,3 @@
-from ete3 import Tree
 import subprocess
 import tempfile
 import json
