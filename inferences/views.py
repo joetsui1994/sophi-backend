@@ -109,6 +109,9 @@ def get_inference_data(request, uuid):
     # calculate total daily (undrawn) sample counts
     total_remaining_samples = [sum(values) for values in zip(*remaining_sample_counts_by_deme.values())]
 
+    # clcaulte total sample number
+    total_sample_num = sum(total_current_samples) + sum(total_previous_samples) + sum(total_remaining_samples)
+
     return Response({
         'uuid': uuid,
         'head_uuid': inference.head.uuid if inference.head else None,
@@ -118,6 +121,7 @@ def get_inference_data(request, uuid):
             'deme': root_deme,
             'time': root_time
         },
+        'total_sample_num': total_sample_num,
         'sample_counts': {
             'by_deme': {
                 deme: {
