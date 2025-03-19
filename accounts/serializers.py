@@ -12,6 +12,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer()
+    recent_inferences = serializers.SerializerMethodField()
 
     class Meta:
         model = User
