@@ -19,6 +19,7 @@ from inferences.utilities.sampling.spatial_prioritised_strategies import sUC_tUC
 from inferences.utilities.sampling.temporal_sampling import earliest_N_temporal_sampling as tEN_draw
 from inferences.utilities.sampling.spatiotemporal_sampling import stUC_draw, stEV_draw
 from inferences.utilities.vis_tree.run_d3tree import run_d3tree
+from inferences.utilities.vis_tree.tree_thinning import thin_tree
 
 
 def generate_short_uuid(length=8):
@@ -277,11 +278,21 @@ class Inference(models.Model):
                 raise ValueError(
                     f"Node '{node.name}' has invalid attribute values for 'deme' or 'time'."
                 ) from e
-        return tree
+        return tree    
     
-    # method to extract/populate inferred_tree_json from inferred_tree_file
+    # method to extract/populate inferred_tree_json (or thinned_inferred_tree_json) from inferred_tree_file
     def populate_inferred_tree_json(self, save: bool = True):
         inferred_tree = self.read_inferred_tree()
+
+        # thin tree if the number of tips exceeds a certain threshold
+        if len(inferred_tree.get_leaves()) > 8500:
+            inferred_migratory_events = self.inferred_migratory_events
+            inferred_tree = thin_tree(inferred_tree,
+                                      inferred_migratory_events,
+                                      target_size=8500,
+                                      min_lineage_size=100,
+                                      fuzziness=0.05,
+                                      alpha=1.1)
 
         # run d3tree script
         tree_xy = run_d3tree(inferred_tree, reflect_xy=True)
