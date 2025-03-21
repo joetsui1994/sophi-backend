@@ -394,7 +394,7 @@ class Inference(models.Model):
         
         # Draw samples from simulation based on the allocation
         samples_df = self.samples_allocation.draw_samples(random_state=random_state)
-        print(samples_df)
+
         # Get all sample IDs from previous inferences
         previous_samples = self.get_previous_samples()
 
