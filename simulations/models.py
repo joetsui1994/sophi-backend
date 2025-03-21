@@ -37,7 +37,6 @@ class Simulation(models.Model):
     Model to store information about a simulated outbreak, including the name, description, parameters, and relevant input/output files.
     """
     uuid = models.CharField(default=generate_short_uuid, editable=False, unique=True, primary_key=True)
-    name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     outbreak_origin = models.IntegerField(blank=True, null=True) # deme ID of the outbreak origin
@@ -60,7 +59,7 @@ class Simulation(models.Model):
     is_complete = models.BooleanField(default=False) # flag to indicate whether all required fields have been populated
 
     def __str__(self):
-        return self.name
+        return self.uuid
     
     # method to generate a unique name for the simulation
     def generate_name(self):
@@ -93,31 +92,6 @@ class Simulation(models.Model):
     # method to get total number of sampled individuals in each deme
     def get_deme_sampled(self):
         return {deme: sum(sampling_times) for deme, sampling_times in self.sampling_times.items()}
-
-    # method to populate description from model attributes
-    def populate_description(self):
-        # make sure that all required fields have been populated
-        assert self.check_complete(), "Aborting: not all required fields have been populated"
-
-        # compute global attack rate and global sampling rate (weighted by population)
-        total_population = self.get_total_population()
-        total_infected = self.get_total_infected()
-        total_sampled = self.get_total_sampled()
-        global_attack_rate = total_infected / total_population
-        global_sampling_rate = total_sampled / total_infected
-        description_1 = (
-            f"Simulation of an outbreak (originating from deme {int(self.outbreak_origin)}) with {self.num_demes} demes "
-            f"(total population {'{:,}'.format(int(total_population))}) over "
-            f"{'{:,}'.format(int(self.duration_days))} days, with beta={self.beta:.3f}, gamma={self.gamma:.3f}, "
-            f"and delta={self.delta:.3f}."
-        )
-        description_2 = (
-            f"By the end of the simulation, {global_attack_rate * 100:.1f}% "
-            f"(n={'{:,}'.format(total_infected)}) of the population had been infected, of whom "
-            f"{global_sampling_rate * 100:.1f}% (n={'{:,}'.format(total_sampled)}) were sampled and sequenced."
-        )
-        self.description = f"{description_1} {description_2}"
-        self.save()
 
     # method to populate epi_params from epi_params_file
     def populate_epi_params(self):
