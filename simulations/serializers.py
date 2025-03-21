@@ -31,7 +31,6 @@ class SimulationSerializer(DynamicFieldsModelSerializer):
         model = Simulation
         fields = [
             'uuid',
-            'name',
             'description',
             'created_at',
             'gamma',
