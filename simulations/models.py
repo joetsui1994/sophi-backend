@@ -40,9 +40,7 @@ class Simulation(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     outbreak_origin = models.IntegerField(blank=True, null=True) # deme ID of the outbreak origin
-    beta = models.FloatField(blank=True, null=True) # transmission coefficient (before normalization)
     gamma = models.FloatField(blank=True, null=True) # recovery rate
-    delta = models.FloatField(blank=True, null=True) # sampling rate
     num_demes = models.PositiveIntegerField(blank=True, null=True) # number of demes
     duration_days = models.PositiveIntegerField(blank=True, null=True) # duration of simulation in days
     populations = models.JSONField(blank=True, null=True) # population size for each deme
@@ -85,9 +83,7 @@ class Simulation(models.Model):
     def populate_epi_params(self):
         epi_params = pd.read_json(self.epi_params_file.path, typ='series')
         self.outbreak_origin = epi_params['outbreak_origin']
-        self.beta = epi_params['beta']
         self.gamma = epi_params['gamma']
-        self.delta = epi_params['delta']
         self.save()
 
     # method to populate num_demes from populations
@@ -183,9 +179,7 @@ class Simulation(models.Model):
                 self.num_demes,
                 self.duration_days,
                 self.outbreak_origin,
-                self.beta,
                 self.gamma,
-                self.delta,
                 self.populations,
                 self.mobility_matrix,
                 self.case_incidence,
