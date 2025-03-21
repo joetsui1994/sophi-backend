@@ -61,18 +61,6 @@ class Simulation(models.Model):
     def __str__(self):
         return self.uuid
     
-    # method to generate a unique name for the simulation
-    def generate_name(self):
-        # make sure that all required fields have been populated
-        assert self.check_complete(), "Aborting: not all required fields have been populated"
-
-        # generate unique name based on model attributes
-        new_name = f"dN({self.num_demes})|o({int(self.outbreak_origin)})|T({self.duration_days})|b({self.beta:.3f})|g({self.gamma:.3f})|d({self.delta:.3f})|"
-        # check for duplicate names
-        num_duplicate = Simulation.objects.exclude(name=self.name).filter(name__startswith=new_name).count()
-        self.name = f"{new_name}{num_duplicate}"
-        self.save()
-
     # method to get total population size
     def get_total_population(self):
         return sum(self.populations.values())
