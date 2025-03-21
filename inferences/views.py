@@ -110,7 +110,7 @@ def get_inference_data(request, uuid):
     total_remaining_samples = [sum(values) for values in zip(*remaining_sample_counts_by_deme.values())]
 
     # clcaulte total sample number
-    total_sample_num = sum(total_current_samples) + sum(total_previous_samples) + sum(total_remaining_samples)
+    total_sample_num = sum(total_current_samples) + sum(total_previous_samples)
 
     return Response({
         'uuid': uuid,
