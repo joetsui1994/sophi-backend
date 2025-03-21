@@ -38,7 +38,7 @@ class SimulationRepository(APIView, CustomSetPagination):
         # get the ordering parameter from the query
         ordering = request.query_params.get('ordering', None)
         descending = request.query_params.get('descending', 'false').lower() == 'true'
-        allowed_ordering_fields = ['beta', 'gamma', 'delta', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled']
+        allowed_ordering_fields = ['num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled']
 
         # start with base queryset
         simulation_queryset = Simulation.objects.filter(is_complete=True)
@@ -60,13 +60,13 @@ class SimulationRepository(APIView, CustomSetPagination):
             serializer = SimulationSerializer(
                 page,
                 many=True,
-                fields=('uuid', 'beta', 'gamma', 'delta', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled'))
+                fields=('uuid', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled'))
             return self.get_paginated_response(serializer.data, request)
         
         serializer = SimulationSerializer(
             simulation_queryset,
             many=True,
-            fields=('uuid', 'beta', 'gamma', 'delta', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled'))
+            fields=('uuid', 'num_demes', 'duration_days', 'total_population', 'total_infected', 'total_sampled'))
         return Response(serializer.data)
     
 
@@ -80,9 +80,6 @@ def get_simulation_data(request, uuid):
             'name',
             'description',
             'created_at',
-            'beta',
-            'gamma',
-            'delta',
             'num_demes',
             'duration_days',
             'populations',
