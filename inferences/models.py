@@ -317,66 +317,75 @@ class Inference(models.Model):
             return inferred_tree_json
         
     # method to get sample counts from simulation
-    def get_sample_counts(self, only_current: bool = False, only_previous: bool = False, only_unsampled: bool = False, by_deme: bool = False):
+    def get_all_sample_counts_by_deme(self):
+        """
+        Get all three types of sample counts (current, previous, and remaining) at once.
+        Returns a tuple of three dictionaries, each containing sample counts by deme.
+        """
         # Check if samples have been drawn
         if self.sample_ids is None:
             raise ValueError("No samples have been drawn for inference.")
 
-        # Handle previous and current samples safely
+        # Get previous and current samples
         previous_samples = self.get_previous_samples() or []
         current_samples = self.sample_ids or []
         
-        if only_current:
-            relevant_sample_ids = current_samples
-        elif only_previous:
-            relevant_sample_ids = previous_samples
-        else:
-            relevant_sample_ids = current_samples + previous_samples
-
-        # Convert to set for faster lookup
-        relevant_sample_ids_set = set(relevant_sample_ids)
-
-        # Get samples data from simulation
+        # Convert to sets for faster lookup
+        current_samples_set = set(current_samples)
+        previous_samples_set = set(previous_samples)
+        all_drawn_samples_set = current_samples_set.union(previous_samples_set)
+        
+        # Get samples data from simulation (do this only once)
         samples_df = self.simulation.get_samples(by_day=True)
         
-        # Apply filtering
-        if only_unsampled:
-            relevant_data = samples_df[~samples_df['sample_id'].map(lambda x: x in relevant_sample_ids_set)]
-        else:
-            relevant_data = samples_df[samples_df['sample_id'].map(lambda x: x in relevant_sample_ids_set)]
-
-        # Return data in the required format
+        # Setup for results
         duration_days = self.simulation.duration_days
-
-        if by_deme:
-            populations = self.simulation.populations
-            
-            # Group by deme and time
-            time_counts = relevant_data.groupby(["deme", "time"])["sample_id"].count().reset_index()
-            
-            # Use defaultdict for safe lookups
-            deme_sample_counts = defaultdict(lambda: defaultdict(int))
-            for _, row in time_counts.iterrows():
-                deme_sample_counts[int(row["deme"])][int(row["time"])] += int(row["sample_id"])
-
-            # Fill in missing days
-            deme_daily_sample_counts = {
-                deme: [deme_sample_counts[int(deme)][t] for t in range(duration_days)]
-                for deme in populations.keys()
-            }
-            return deme_daily_sample_counts
+        populations = self.simulation.populations
         
-        else:
-            # Group by time
-            time_counts = relevant_data.groupby("time")["sample_id"].count().reset_index()
-
-            # Convert to dict for fast lookup
-            sample_counts = time_counts.set_index("time")["sample_id"].to_dict()
-
-            # Fill missing days with 0
-            daily_sample_counts = [sample_counts.get(t, 0) for t in range(duration_days)]
-            return daily_sample_counts
-
+        # Initialize defaultdicts for all three result types
+        current_deme_sample_counts = defaultdict(lambda: defaultdict(int))
+        previous_deme_sample_counts = defaultdict(lambda: defaultdict(int))
+        remaining_deme_sample_counts = defaultdict(lambda: defaultdict(int))
+        
+        # Group by deme and time
+        grouped = samples_df.groupby(["deme", "time"])
+        
+        # Process each group to categorize samples
+        for (deme, time), group in grouped:
+            deme_int = int(deme)
+            time_int = int(time)
+            
+            for sample_id in group["sample_id"]:
+                if sample_id in current_samples_set:
+                    current_deme_sample_counts[deme_int][time_int] += 1
+                elif sample_id in previous_samples_set:
+                    previous_deme_sample_counts[deme_int][time_int] += 1
+                else:
+                    remaining_deme_sample_counts[deme_int][time_int] += 1
+        
+        # Fill in missing days for all demes in all three result types
+        deme_keys = populations.keys()
+        
+        # Process current samples
+        current_results = {
+            deme: [current_deme_sample_counts[int(deme)][t] for t in range(duration_days)]
+            for deme in deme_keys
+        }
+        
+        # Process previous samples
+        previous_results = {
+            deme: [previous_deme_sample_counts[int(deme)][t] for t in range(duration_days)]
+            for deme in deme_keys
+        }
+        
+        # Process remaining samples
+        remaining_results = {
+            deme: [remaining_deme_sample_counts[int(deme)][t] for t in range(duration_days)]
+            for deme in deme_keys
+        }
+        
+        return current_results, previous_results, remaining_results
+    
     # method to draw samples from simulation given samples_allocation
     def draw_samples(self, random_state: int = 42, save: bool = True):
         # Check if samples allocation is provided
@@ -385,7 +394,7 @@ class Inference(models.Model):
         
         # Draw samples from simulation based on the allocation
         samples_df = self.samples_allocation.draw_samples(random_state=random_state)
-
+        print(samples_df)
         # Get all sample IDs from previous inferences
         previous_samples = self.get_previous_samples()
 

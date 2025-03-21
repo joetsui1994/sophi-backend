@@ -95,12 +95,8 @@ def get_inference_data(request, uuid):
     # get inferred deme of inferred tree
     root_deme, root_time = inference.get_inferred_root()
 
-    # get daily (drawn) sample counts by deme
-    current_sample_counts_by_deme = inference.get_sample_counts(only_current=True, by_deme=True)
-    # get daily (drawn in previous inferences) sample counts by deme
-    previous_sample_counts_by_deme = inference.get_sample_counts(only_previous=True, by_deme=True)
-    # get daily (undrawn) sample counts by deme
-    remaining_sample_counts_by_deme = inference.get_sample_counts(only_unsampled=True, by_deme=True)
+    # get daily (current, previous, and remaining) sample counts by deme
+    current_sample_counts_by_deme, previous_sample_counts_by_deme, remaining_sample_counts_by_deme = inference.get_all_sample_counts_by_deme()
 
     # calculate total daily (drawn) sample counts
     total_current_samples = [sum(values) for values in zip(*current_sample_counts_by_deme.values())]
