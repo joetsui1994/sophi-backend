@@ -6,8 +6,11 @@ from rest_framework.response import Response
 from simulations.models import Simulation
 from rest_framework.views import APIView
 from rest_framework import status
-# from celery import shared_task
+from celery import shared_task
 from .models import Inference
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class InferenceSubmission(APIView):
@@ -53,30 +56,41 @@ class InferenceSubmission(APIView):
         inference = inference_serializer.save()
 
         # Run the inference asynchronously
-        # run_inference.delay(inference.id)
-        inference.status = Inference.StatusChoices.RUNNING
-        inference.save()
-        inference.run_inference()
+        run_inference.delay(inference.id)
+        # inference.status = Inference.StatusChoices.RUNNING
+        # inference.save()
+        # inference.run_inference()
 
         # Return the created inference
         return Response({"message": "Inference created successfully.",}, status=status.HTTP_201_CREATED)
 
 
-# @shared_task
-# def run_inference(inference_id):
-#     from .models import Inference  # Import here to avoid circular imports
-#     import traceback
+@shared_task
+def run_inference(inference_id):
+    from .models import Inference  # Import here to avoid circular imports
 
-#     try:
-#         inference = Inference.objects.get(id=inference_id)
-#         inference.status = Inference.StatusChoices.RUNNING
-#         inference.save()
-#         inference.run_inference()
-#     except Inference.DoesNotExist:
-#         print(f"Inference with id '{inference_id}' not found.")
-#     except Exception as e:
-#         print(f"An error occurred while running inference with id '{inference_id}': {str(e)}")
-#         traceback.print_exc()
+    try:
+        inference = Inference.objects.get(id=inference_id)
+        inference.status = Inference.StatusChoices.RUNNING
+        inference.save()
+
+        logger.info(f"Started inference: {inference_id}")
+
+        inference.run_inference()
+
+        logger.info(f"Inference completed: {inference_id}")
+
+    except Inference.DoesNotExist:
+        logger.error(f"Inference with id '{inference_id}' not found.")
+
+    except Exception as e:
+        logger.exception(f"Error running inference {inference_id}: {str(e)}")
+
+        try:
+            inference.status = Inference.StatusChoices.FAILED
+            inference.save(update_fields=["status"])
+        except Exception:
+            logger.warning(f"Could not mark inference {inference_id} as FAILED")
 
 
 @api_view(['GET'])

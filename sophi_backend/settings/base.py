@@ -177,3 +177,7 @@ MAX_PAGE_SIZE = 100
 
 # Inference data
 INFERENCE_FOLDER = 'inferences/'  # Subdirectory for inference results
+
+
+# Celer settings
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
