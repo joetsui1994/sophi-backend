@@ -94,10 +94,6 @@ class Simulation(models.Model):
     def get_deme_sampled(self):
         return {deme: sum(sampling_times) for deme, sampling_times in self.sampling_times.items()}
 
-    # method to get basic reproductive number (accounting for sampling by default)
-    def get_R0(self, with_sampling: bool = True):
-        return self.beta / (self.gamma + self.delta if with_sampling else self.gamma)
-
     # method to populate description from model attributes
     def populate_description(self):
         # make sure that all required fields have been populated
