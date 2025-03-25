@@ -299,6 +299,7 @@ class Inference(models.Model):
 
         # construct final tree json
         inferred_tree_json = {}
+        current_sample_ids = self.sample_ids or []
         for node in inferred_tree.traverse():
             inferred_tree_json[node.name] = {
                 'x': tree_xy[node.name][0],
@@ -307,6 +308,7 @@ class Inference(models.Model):
                 'time': node.time,
                 'brlen': node.dist,
                 'up': node.up.name if node.up else None,
+                'curr': node.name in current_sample_ids
             }
 
         # save inferred_tree_json if requested
