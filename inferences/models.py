@@ -223,7 +223,7 @@ class Inference(models.Model):
     random_seed = models.PositiveIntegerField(default=generate_random_seed)
 
     def __str__(self):
-        return f"{self.simulation.name}|{self.uuid}|"
+        return self.uuid
     
     # prevent saving a new instance with head == None if another instance with head == None already exists
     def save(self, *args, **kwargs):
@@ -333,7 +333,6 @@ class Inference(models.Model):
         # Convert to sets for faster lookup
         current_samples_set = set(current_samples)
         previous_samples_set = set(previous_samples)
-        all_drawn_samples_set = current_samples_set.union(previous_samples_set)
         
         # Get samples data from simulation (do this only once)
         samples_df = self.simulation.get_samples(by_day=True)
