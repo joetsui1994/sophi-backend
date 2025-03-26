@@ -42,8 +42,9 @@ class InferenceSerializer(serializers.ModelSerializer):
             validated_data['status'] = Inference.StatusChoices.PENDING
 
         # if the user explicitly sent "random_seed": null or "random_seed": None, remove it
-        if "random_seed" in validated_data and validated_data["random_seed"] is None:
-            validated_data.pop("random_seed")
+        # unless dta_method is None (i.e. a dummy inference)
+        if "random_seed" in validated_data and validated_data["random_seed"] is None and validated_data["dta_method"] is not None:
+            del validated_data["random_seed"]
 
         return super().create(validated_data)
     
