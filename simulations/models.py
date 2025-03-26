@@ -233,14 +233,16 @@ class Simulation(models.Model):
             for child_inference in children_inferences:
                 children.append({
                     'uuid': child_inference.uuid,
-                    'children': collect_children_inferences(child_inference)
+                    'children': collect_children_inferences(child_inference),
+                    'is_dummy': child_inference.samples_allocation is None
                 })
             return children
 
         # build tree dict
         tree_dict = {
             'uuid': root_inference.uuid,
-            'children': collect_children_inferences(root_inference)
+            'children': collect_children_inferences(root_inference),
+            'is_dummy': root_inference.samples_allocation is None
         }
 
         return tree_dict
