@@ -265,6 +265,10 @@ class Inference(models.Model):
     
     # method to read inferred_tree_file and return an ETE3 tree object with node attributes (deme as integer and time as float)
     def read_inferred_tree(self):
+        # Check if inferred_tree_file exists
+        if not self.inferred_tree_file:
+            raise FileNotFoundError("Inferred tree file not found.")
+
         tree = Tree(self.inferred_tree_file.path, format=1)
         for node in tree.traverse():
             try:
@@ -320,10 +324,6 @@ class Inference(models.Model):
         
     # method to get sample counts from simulation
     def get_all_sample_counts_by_deme(self):
-        """
-        Get all three types of sample counts (current, previous, and remaining) at once.
-        Returns a tuple of three dictionaries, each containing sample counts by deme.
-        """
         # Check if samples have been drawn
         if self.sample_ids is None:
             raise ValueError("No samples have been drawn for inference.")
@@ -559,7 +559,11 @@ class Inference(models.Model):
             raise e
 
     # method to run inference evaluation (comparison with ground truth)
-    def evaluate(self, save: bool = True):        
+    def evaluate(self, save: bool = True):
+        # Check if inferred_tree_file exists
+        if not self.inferred_tree_file:
+            raise FileNotFoundError("Inferred tree file not found.")
+
         # Get number of migratory events
         num_inferred_events = len(self.inferred_migratory_events)
 
