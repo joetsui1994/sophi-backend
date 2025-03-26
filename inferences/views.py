@@ -48,7 +48,7 @@ class InferenceSubmission(APIView):
             "head": head_inference.id,
             "dta_method": inference_specs.get("dta_method"),
             "note": inference_specs.get("note"),
-            "status": Inference.StatusChoices.PENDING,
+            "status": Inference.StatusChoices.PENDING if samples_allocation else Inference.StatusChoices.SUCCESS,
             "random_seed": inference_specs.get("random_seed", None)
         }, context={"request": request})
 

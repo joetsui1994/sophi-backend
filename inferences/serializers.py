@@ -36,7 +36,10 @@ class InferenceSerializer(serializers.ModelSerializer):
         # automatically assign the current user if not explicitly provided
         user = self.context['request'].user
         validated_data['user'] = user
-        validated_data['status'] = Inference.StatusChoices.PENDING # set default status
+            
+        # Only set status to PENDING if no status is provided
+        if 'status' not in validated_data:
+            validated_data['status'] = Inference.StatusChoices.PENDING
 
         # if the user explicitly sent "random_seed": null or "random_seed": None, remove it
         if "random_seed" in validated_data and validated_data["random_seed"] is None:
