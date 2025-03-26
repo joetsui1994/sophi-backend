@@ -242,7 +242,7 @@ class Simulation(models.Model):
         tree_dict = {
             'uuid': root_inference.uuid,
             'children': collect_children_inferences(root_inference),
-            'is_dummy': root_inference.samples_allocation is None
+            'is_dummy': len(root_inference.sample_ids) == 0
         }
 
         return tree_dict
