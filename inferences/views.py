@@ -22,12 +22,15 @@ class InferenceSubmission(APIView):
 
         # Validate the sampling specs
         sampling_specs = request.data.get("sampling_specs")
-        samples_allocation_serializer = SamplesAllocationSerializer(data=sampling_specs)
-        if not samples_allocation_serializer.is_valid():
-            return Response(samples_allocation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        samples_allocation = None
+
+        if sampling_specs is not None:
+            samples_allocation_serializer = SamplesAllocationSerializer(data=sampling_specs)
+            if not samples_allocation_serializer.is_valid():
+                return Response(samples_allocation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create the SamplesAllocation instance
-        samples_allocation = samples_allocation_serializer.save()
+            # Create the SamplesAllocation instance
+            samples_allocation = samples_allocation_serializer.save()
 
         # Validate inference specs
         inference_specs = request.data.get("inference_specs")
@@ -41,7 +44,7 @@ class InferenceSubmission(APIView):
         # Validate inference specs using the serializer
         inference_serializer = InferenceSerializer(data={
             "simulation": simulation.uuid,
-            "samples_allocation": samples_allocation.id,
+            "samples_allocation": samples_allocation.id if samples_allocation else None,
             "head": head_inference.id,
             "dta_method": inference_specs.get("dta_method"),
             "note": inference_specs.get("note"),
@@ -55,8 +58,9 @@ class InferenceSubmission(APIView):
         # Save the validated Inference object
         inference = inference_serializer.save()
 
-        # Run the inference asynchronously
-        run_inference.delay(inference.id)
+        # Run the inference asynchronously only if sampling specs are provided
+        if samples_allocation:
+            run_inference.delay(inference.id)
         # inference.status = Inference.StatusChoices.RUNNING
         # inference.save()
         # inference.run_inference()
@@ -97,53 +101,68 @@ def run_inference(inference_id):
 @permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
 def get_inference_data(request, uuid):
     inference = get_object_or_404(Inference, uuid=uuid)
+
     # check if the inference belongs to the current user, if head is not None (not a root inference)
     if inference.head is not None and inference.user != request.user:
         return Response({"error": "You do not have permission to access this inference."}, status=status.HTTP_403_FORBIDDEN)
 
-    # get inferred (annotated) tree json
-    inferred_tree_json = inference.inferred_tree_json
-    # get inferred migratory events (with transmission lineages)
-    inferred_migratory_events = inference.inferred_migratory_events
-
-    # get inferred deme of inferred tree
-    root_deme, root_time = inference.get_inferred_root()
-
-    # get daily (current, previous, and remaining) sample counts by deme
-    current_sample_counts_by_deme, previous_sample_counts_by_deme, remaining_sample_counts_by_deme = inference.get_all_sample_counts_by_deme()
-
-    # calculate total daily (drawn) sample counts
-    total_current_samples = [sum(values) for values in zip(*current_sample_counts_by_deme.values())]
-    # calculate total daily (drawn in previous inferences) sample counts
-    total_previous_samples = [sum(values) for values in zip(*previous_sample_counts_by_deme.values())]
-    # calculate total daily (undrawn) sample counts
-    total_remaining_samples = [sum(values) for values in zip(*remaining_sample_counts_by_deme.values())]
-
-    # clcaulte total sample number
-    total_sample_num = sum(total_current_samples) + sum(total_previous_samples)
-
-    return Response({
+    # prepare response data
+    response_data = {
         'uuid': uuid,
         'head_uuid': inference.head.uuid if inference.head else None,
-        'inferred_tree': inferred_tree_json,
-        'inferred_migratory_events': inferred_migratory_events,
-        'inferred_root': {
-            'deme': root_deme,
-            'time': root_time
-        },
-        'total_sample_num': total_sample_num,
-        'sample_counts': {
-            'by_deme': {
-                deme: {
-                    'current': current_sample_counts_by_deme[deme],
-                    'previous': previous_sample_counts_by_deme[deme],
-                    'remaining': remaining_sample_counts_by_deme[deme]
-                } for deme in current_sample_counts_by_deme.keys()
+    }
+
+    # check if this is an empty inference with no data
+    if not inference.samples_allocation:
+        return Response(response_data)
+
+    try:
+        # get inferred (annotated) tree json
+        inferred_tree_json = inference.inferred_tree_json
+        # get inferred migratory events (with transmission lineages)
+        inferred_migratory_events = inference.inferred_migratory_events
+
+        # get inferred deme of inferred tree
+        root_deme, root_time = inference.get_inferred_root()
+
+        # get daily (current, previous, and remaining) sample counts by deme
+        current_sample_counts_by_deme, previous_sample_counts_by_deme, remaining_sample_counts_by_deme = inference.get_all_sample_counts_by_deme()
+
+        # calculate total daily (drawn) sample counts
+        total_current_samples = [sum(values) for values in zip(*current_sample_counts_by_deme.values())]
+        # calculate total daily (drawn in previous inferences) sample counts
+        total_previous_samples = [sum(values) for values in zip(*previous_sample_counts_by_deme.values())]
+        # calculate total daily (undrawn) sample counts
+        total_remaining_samples = [sum(values) for values in zip(*remaining_sample_counts_by_deme.values())]
+
+        # calculate total sample number
+        total_sample_num = sum(total_current_samples) + sum(total_previous_samples)
+
+        return Response({
+            'uuid': uuid,
+            'head_uuid': inference.head.uuid if inference.head else None,
+            'inferred_tree': inferred_tree_json,
+            'inferred_migratory_events': inferred_migratory_events,
+            'inferred_root': {
+                'deme': root_deme,
+                'time': root_time
             },
-            'total': {
-                'current': total_current_samples,
-                'previous': total_previous_samples,
-                'remaining': total_remaining_samples
+            'total_sample_num': total_sample_num,
+            'sample_counts': {
+                'by_deme': {
+                    deme: {
+                        'current': current_sample_counts_by_deme[deme],
+                        'previous': previous_sample_counts_by_deme[deme],
+                        'remaining': remaining_sample_counts_by_deme[deme]
+                    } for deme in current_sample_counts_by_deme.keys()
+                },
+                'total': {
+                    'current': total_current_samples,
+                    'previous': total_previous_samples,
+                    'remaining': total_remaining_samples
+                }
             }
-        }
-    })
+        })
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
