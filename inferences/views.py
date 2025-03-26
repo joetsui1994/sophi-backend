@@ -106,16 +106,6 @@ def get_inference_data(request, uuid):
     if inference.head is not None and inference.user != request.user:
         return Response({"error": "You do not have permission to access this inference."}, status=status.HTTP_403_FORBIDDEN)
 
-    # prepare response data
-    response_data = {
-        'uuid': uuid,
-        'head_uuid': inference.head.uuid if inference.head else None,
-    }
-
-    # check if this is an empty inference with no data
-    if not inference.samples_allocation:
-        return Response(response_data)
-
     try:
         # get inferred (annotated) tree json
         inferred_tree_json = inference.inferred_tree_json
