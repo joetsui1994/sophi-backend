@@ -220,7 +220,7 @@ class Inference(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     status = models.CharField(max_length=10, choices=StatusChoices.choices, default=StatusChoices.PENDING)
     evaluations = models.JSONField(blank=True, null=True) # evaluation metrics for the inference
-    random_seed = models.PositiveIntegerField(default=generate_random_seed, black=True, null=True) # random seed for reproducibility
+    random_seed = models.PositiveIntegerField(default=generate_random_seed, blank=True, null=True) # random seed for reproducibility
 
     def __str__(self):
         return self.uuid
