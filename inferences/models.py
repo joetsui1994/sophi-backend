@@ -212,7 +212,7 @@ class Inference(models.Model):
     sample_ids = models.JSONField(blank=True, null=True) # IDs of samples used for inference
     inferred_migratory_events = models.JSONField(blank=True, null=True) # inferred migratory events
     inferred_tree_json = models.JSONField(blank=True, null=True) # inferred tree in JSON (nodes/links) format
-    dta_method = models.CharField(max_length=2, choices=DTAInferenceMethods.choices, default=DTAInferenceMethods.TREETIME, blank=False, null=False)
+    dta_method = models.CharField(max_length=2, choices=DTAInferenceMethods.choices, blank=True, null=True)
     inferred_tree_file = models.FileField(upload_to=upload_inferred_tree_file_path) # inferred tree file
     head = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='children') # previous inference used for iterative inference
     note = models.CharField(max_length=300, blank=True, null=True) # note for the inference
