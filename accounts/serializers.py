@@ -28,6 +28,6 @@ class UserSerializer(serializers.ModelSerializer):
         except ValueError:
             num_recent = 5
 
-        # Retrieve the most recent inferences; assuming the related name is 'inference_set'
-        recent = obj.inference_set.order_by("-created_at")[:num_recent]
+        # Retrieve the most recent inferences (excluding dummy inferences)
+        recent = obj.inference_set.exclude(dta_method__isnull=True).order_by("-created_at")[:num_recent]
         return InferenceSimpleSerializer(recent, many=True, context=self.context).data
