@@ -398,31 +398,44 @@ class Inference(models.Model):
         # Get previous and current samples
         previous_samples = self.get_previous_samples() or []
         current_samples = self.sample_ids or []
-        all_samples = previous_samples + current_samples
-
-        # Get samples dataframes from simulation
+        all_samples = set(previous_samples + current_samples)
+        
+        # Get samples dataframe from simulation
         samples_df = self.simulation.get_samples()
-
-        # Get number of samples that are in the current inference in each deme
-        samples_per_deme = samples_df[samples_df['sample_id'].isin(all_samples)]['deme'].value_counts().to_dict()
-
-        # Calculate proportion of samples in each deme that are in the current inference
+        total_samples = len(samples_df)
+        
+        # Pre-calculate the mask for included samples
+        included_mask = samples_df['sample_id'].isin(all_samples)
+        included_samples_df = samples_df[included_mask]
+        included_count = len(included_samples_df)
+        
+        # Calculate counts in one pass
+        samples_per_deme = included_samples_df['deme'].value_counts().to_dict()
+        
+        # Initialize the result dictionary with zeros for all demes
+        final_samples_per_deme = {deme: 0 for deme in range(self.simulation.num_demes)}
+        
         if proportion:
+            # Calculate total counts per deme
             total_samples_per_deme = samples_df['deme'].value_counts().to_dict()
-            samples_prop_per_deme = {deme: num_samples / total_samples_per_deme[deme] for deme, num_samples in samples_per_deme.items()}
-            final_samples_per_deme = {deme: samples_prop_per_deme.get(deme, 0) for deme in range(self.simulation.num_demes)}
-
-            # Include all demes in the result
+            
+            # Update with actual proportions where we have data
+            for deme, count in samples_per_deme.items():
+                deme_total = total_samples_per_deme.get(deme, 0)
+                if deme_total > 0:
+                    final_samples_per_deme[deme] = count / deme_total
+            
+            # Add the 'all' key if requested
             if include_all:
-                final_samples_per_deme['all'] = len(all_samples) / len(samples_df)
-
+                final_samples_per_deme['all'] = included_count / total_samples if total_samples > 0 else 0
         else:
-            final_samples_per_deme = {deme: samples_per_deme.get(deme, 0) for deme in range(self.simulation.num_demes)}
-
-            # Include all demes in the result
+            # Update with actual counts
+            final_samples_per_deme.update(samples_per_deme)
+            
+            # Add the 'all' key if requested
             if include_all:
-                final_samples_per_deme['all'] = len(all_samples)
-
+                final_samples_per_deme['all'] = included_count
+        
         return final_samples_per_deme
 
     # method to draw samples from simulation given samples_allocation
