@@ -45,17 +45,30 @@ def get_case_incidence(trajs_file: str, format: str = 'dataframe'):
 
     # filter for I and compute compute differences in value
     trajs = trajs[trajs.population == 'I'].drop(columns=['population'])
-    trajs['value_diff'] = trajs.groupby('index')['value'].diff()
+
+    # handle initial cases (t=0) separately
+    initial_cases = trajs[trajs.t == 0].copy()
+    initial_cases = (initial_cases.groupby(['t', 'index'])
+                     .agg({'value': 'sum'})
+                     .reset_index()
+                     .rename(columns={'index': 'deme', 'value': 'new_cases'}))
+    
+    # for t > 0, compute differences in value to identify new cases
+    trajs_later = trajs[trajs.t > 0].copy()
+    trajs_later['value_diff'] = trajs_later.groupby('index')['value'].diff()
 
     # filter for valid incidence changes (i.e. sum(value_diff) == 1)
-    valid_times = trajs.groupby('t')['value_diff'].transform('sum') == 1
-    incidence = trajs[valid_times & (trajs['value_diff'] == 1)].astype({'t': int})
+    valid_times = trajs_later.groupby('t')['value_diff'].transform('sum') == 1
+    incidence_later = trajs_later[valid_times & (trajs_later['value_diff'] == 1)].astype({'t': int})
     
     # group by time and deme, count new cases
-    incidence = (incidence.groupby(['t', 'index'])
-                 .size()
-                 .reset_index(name='new_cases')
-                 .rename(columns={'index': 'deme'}))
+    incidence_later = (incidence_later.groupby(['t', 'index'])
+                       .size()
+                       .reset_index(name='new_cases')
+                       .rename(columns={'index': 'deme'}))
+
+    # combine initial and later cases
+    incidence = pd.concat([initial_cases, incidence_later], ignore_index=True)
 
     if format == 'dataframe':
         return incidence
