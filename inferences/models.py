@@ -387,6 +387,44 @@ class Inference(models.Model):
         
         return current_results, previous_results, remaining_results
     
+    def calculate_samples_per_deme(self, include_all=True, proportion=False):
+        # Check for dummy inference
+        if self.dta_method is None:
+            dummy_output = {deme: 0 for deme in range(self.simulation.num_demes)}
+            if include_all:
+                dummy_output['all'] = 0
+            return dummy_output
+
+        # Get previous and current samples
+        previous_samples = self.get_previous_samples() or []
+        current_samples = self.sample_ids or []
+        all_samples = previous_samples + current_samples
+
+        # Get samples dataframes from simulation
+        samples_df = self.simulation.get_samples()
+
+        # Get number of samples that are in the current inference in each deme
+        samples_per_deme = samples_df[samples_df['sample_id'].isin(all_samples)]['deme'].value_counts().to_dict()
+
+        # Calculate proportion of samples in each deme that are in the current inference
+        if proportion:
+            total_samples_per_deme = samples_df['deme'].value_counts().to_dict()
+            samples_prop_per_deme = {deme: num_samples / total_samples_per_deme[deme] for deme, num_samples in samples_per_deme.items()}
+            final_samples_per_deme = {deme: samples_prop_per_deme.get(deme, 0) for deme in range(self.simulation.num_demes)}
+
+            # Include all demes in the result
+            if include_all:
+                final_samples_per_deme['all'] = len(all_samples) / len(samples_df)
+
+        else:
+            final_samples_per_deme = {deme: samples_per_deme.get(deme, 0) for deme in range(self.simulation.num_demes)}
+
+            # Include all demes in the result
+            if include_all:
+                final_samples_per_deme['all'] = len(all_samples)
+
+        return final_samples_per_deme
+
     # method to draw samples from simulation given samples_allocation
     def draw_samples(self, random_state: int = 42, save: bool = True):
         # Check if samples allocation is provided
@@ -643,6 +681,7 @@ class Inference(models.Model):
 
         # Collect all evaluation scores
         all_evals = {
+            'sampling_props': self.calculate_samples_per_deme(include_all=True, proportion=True),
             'num_inferred_events': num_inferred_events,
             'prop_true_events_inferred': num_inferred_events / len(true_events),
             'earliest_intro_time_eval_count': earliest_introductions_time_eval_count,
