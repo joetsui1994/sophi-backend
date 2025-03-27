@@ -70,7 +70,6 @@ class InferenceOverviewSerializer(InferenceSerializer):
     depth = serializers.SerializerMethodField()
     num_samples = serializers.SerializerMethodField()
     prop_sampled = serializers.SerializerMethodField()
-    prop_infections_sampled = serializers.SerializerMethodField()
     samples_allocation = SamplesAllocationSerializer(read_only=True)
 
     class Meta(InferenceSerializer.Meta):  # Inherit from InferenceSerializer
@@ -81,7 +80,6 @@ class InferenceOverviewSerializer(InferenceSerializer):
             'depth',
             'num_samples',
             'prop_sampled',
-            'prop_infections_sampled',
             'samples_allocation',
             'head_uuid',
             'note',
@@ -104,14 +102,13 @@ class InferenceOverviewSerializer(InferenceSerializer):
         return obj.get_depth()
 
     def get_num_samples(self, obj):
+        if obj.dta_method is None:
+            return None
         previous_samples = obj.get_previous_samples() or []  # Ensure iterable
         sample_ids = obj.sample_ids or []  # Ensure iterable
         return len(previous_samples) + len(sample_ids)
     
     def get_prop_sampled(self, obj):
-        total_samples = obj.simulation.get_total_sampled()
-        return self.get_num_samples(obj) / total_samples if total_samples else 0
-    
-    def get_prop_infections_sampled(self, obj):
-        total_infections = obj.simulation.get_total_infected()
-        return self.get_num_samples(obj) / total_infections if total_infections else 0
+        if obj.dta_method is None:
+            return None
+        return obj.evaluations.sampling_props
