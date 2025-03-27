@@ -15,99 +15,133 @@ def thin_tree(tree, inferred_migratory_events, target_size, min_lineage_size=200
     destination_nodes = [event['destination_node'] for event in inferred_migratory_events]
     anchor_nodes = set(origin_nodes + destination_nodes + [tree.get_tree_root().name])
     
-    # sort objects in inferred_migratory_events by size attribute and take only those with size >= min_lineage_size
-    sorted_inferred_migratory_events = sorted(inferred_migratory_events, key=lambda x: x['size'], reverse=True)
-    sorted_inferred_migratory_events = [event for event in sorted_inferred_migratory_events if event['size'] >= min_lineage_size]
-
-    # get the total number of leaves in the lineages that qualify for thinning
-    total_lineage_size = sum([event['size'] ** alpha for event in sorted_inferred_migratory_events])
-
-    # calculate the overall thinning factor
-    tree_size = len(tree.get_leaves())
+    # get the initial tree size
+    initial_tree_size = len(tree.get_leaves())
 
     # check if we need to thin the tree at all
-    if tree_size <= target_size:
+    if initial_tree_size <= target_size:
         return tree
     
-    # check if there are any qualifying lineages to thin
-    if total_lineage_size == 0:
-        # no qualifying lineages, but we still need to thin
-        # handle the case where the entire tree is essentially one lineage
-        if tree_size > target_size:
-            # get a dictionary of all leaves in the tree
-            leaves = {leaf.name: leaf for leaf in tree.get_leaves()}
-            to_remove = tree_size - target_size
-
-            while to_remove > 0:
-                # recompute branch lengths at each iteration to account for tree changes
-                leaf_dists = {
-                    name: leaves[name].dist 
-                    for name in leaves 
-                    if name.startswith('leaf')  # Only consider leaves with 'leaf' prefix
-                }
-
-                if not leaf_dists:
-                    # no suitable leaves left to remove
-                    break
-
-                # sort leaves by branch length at each iteration
-                sorted_leaves = sorted(leaf_dists, key=leaf_dists.get)
-
-                for leaf_name in sorted_leaves:
-                    leaf = leaves[leaf_name]
-                    
-                    # skip leaves whose parent is an anchor node
-                    if leaf.up.name in anchor_nodes:
-                        continue
-                        
-                    # remove the leaf
-                    leaf.delete(preserve_branch_length=True)
-                    to_remove -= 1
-                    del leaves[leaf_name]  # remove from our tracking dictionary
-                    
-                    # break if we've reached our target
-                    if to_remove <= 0:
-                        break
-
-        return tree
-
-    global_thinning_factor = (tree_size - target_size) / total_lineage_size
-
     # get a dictionary of all leaves in the tree, with the leaf name as the key and the leaf object as the value
-    leaves = {leaf.name: leaf for leaf in tree.get_leaves()}
+    all_leaves = {leaf.name: leaf for leaf in tree.get_leaves()}
 
-    # iterate over lineages
-    for lineage in sorted_inferred_migratory_events:
-        # calculate the number of leaves to remove from the lineage
-        num_leaves_to_remove = int((global_thinning_factor + fuzziness) * (lineage['size'] ** alpha))
+    # identify all lineage members
+    lineage_members = set()
+    for event in inferred_migratory_events:
+        lineage_members.update(event.get('members', []))
 
-        while num_leaves_to_remove > 0:
-            # recompute the dictionary of candidate leaves with updated distances
-            lineage_leaf_dists = {
-                leaf_name: leaves[leaf_name].dist
-                for leaf_name in lineage['members']
-                if leaf_name.startswith('leaf') and leaf_name in leaves
-            }
-            # re-sort the leaves based on the current distances
-            sorted_lineage_leaves = sorted(lineage_leaf_dists, key=lineage_leaf_dists.get)
+    # identify leaves that are not part of any lineage
+    exterior_leaves = {
+        name: leaf for name, leaf in all_leaves.items() 
+        if name not in lineage_members and name.startswith('leaf')
+    }
 
-            # if there are no candidates left, break out of the loop
-            if not sorted_lineage_leaves:
+    # get lineages that qualify for thinning and sort them by size
+    sorted_inferred_migratory_events = sorted(
+        [event for event in inferred_migratory_events if event['size'] >= min_lineage_size],
+        key=lambda x: x['size'], reverse=True
+    )
+
+    # calculate the thinning target for the exterior leaves and the lineages
+    total_weighted_lineage_size = sum([event['size'] ** alpha for event in sorted_inferred_migratory_events])
+    weighted_exterior_size = len(exterior_leaves) ** alpha
+    global_thinning_factor = (initial_tree_size - target_size) / (total_weighted_lineage_size + weighted_exterior_size)
+
+    # thin the exterior leaves
+    num_to_remove = int(global_thinning_factor * weighted_exterior_size)
+    # track leaves we've already evaluated but couldn't remove
+    skipped_leaves = set()
+    while num_to_remove > 0:
+        # get leaves we haven't skipped yet
+        available_leaves = {
+            name: leaf.dist 
+            for name, leaf in exterior_leaves.items()
+            if name not in skipped_leaves
+        }
+
+        if not available_leaves:
+            break
+
+        # sort leaves by branch length
+        sorted_leaves = sorted(available_leaves, key=available_leaves.get)
+
+        # flag to check if we removed any in this iteration
+        removed_any = False
+
+        for leaf_name in sorted_leaves:
+            if leaf_name not in exterior_leaves:
+                continue
+
+            leaf = exterior_leaves[leaf_name]
+
+            # skip leaves whose parent is an anchor node and mark as skipped
+            if leaf.up.name in anchor_nodes:
+                skipped_leaves.add(leaf_name)
+                continue
+
+            # remove the leaf
+            leaf.delete(preserve_branch_length=True)
+            num_to_remove -= 1
+            del exterior_leaves[leaf_name]  # remove from our tracking dictionary
+            removed_any = True
+
+            # update the master list of leaves
+            if leaf_name in all_leaves:
+                del all_leaves[leaf_name]
+
+            # break if we've reached our target
+            if num_to_remove <= 0:
                 break
 
-            # iterate over leaves in the lineage
-            for leaf_name in sorted_lineage_leaves:
-                leaf = leaves[leaf_name]
-                # check if parent node is an anchor node
-                if leaf.up.name in anchor_nodes:
+        # if we didn't remove any leaves in this pass, we're stuck
+        if not removed_any:
+            break
+
+    # thin the lineages
+    for lineage in sorted_inferred_migratory_events:
+        num_to_remove = int(global_thinning_factor * (lineage['size'] ** alpha))
+        # track leaves we've already evaluated but couldn't remove
+        skipped_leaves = set()
+        while num_to_remove > 0:
+            # get leaves we haven't skipped yet
+            available_leaves = {
+                name: leaf.dist 
+                for name, leaf in all_leaves.items()
+                if name in lineage['members'] and name not in skipped_leaves
+            }
+
+            if not available_leaves:
+                break
+
+            # sort leaves by branch length
+            sorted_leaves = sorted(available_leaves, key=available_leaves.get)
+
+            # flag to check if we removed any in this iteration
+            removed_any = False
+
+            for leaf_name in sorted_leaves:
+                if leaf_name not in all_leaves:
                     continue
-                # remove the leaf from the tree
+
+                leaf = all_leaves[leaf_name]
+
+                # skip leaves whose parent is an anchor node
+                if leaf.up.name in anchor_nodes:
+                    skipped_leaves.add(leaf_name)
+                    continue
+
+                # remove the leaf
                 leaf.delete(preserve_branch_length=True)
-                num_leaves_to_remove -= 1
-                # remove the pruned leaf from the leaves dictionary to avoid reprocessing
-                del leaves[leaf_name]
-                # break out of the for-loop if we've reached the target for this lineage
-                if num_leaves_to_remove <= 0:
+                num_to_remove -= 1
+                del all_leaves[leaf_name]
+                removed_any = True
+
+                # break if we've reached our target
+                if num_to_remove <= 0:
                     break
-            
+
+            # if we didn't remove any leaves in this pass, we're stuck
+            if not removed_any:
+                break
+
     return tree
