@@ -2,6 +2,110 @@ import pandas as pd
 import numpy as np
 
 
+def uniform_sample_temporal_allocation(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        time_range: tuple = None,
+        target_proportion: float = None,
+        target_number: int = None,
+        target_demes: list = None
+    ) -> list:
+    """
+    Allocate daily sample counts in proportion to the total daily number
+    of samples (across specified `target_demes`), restricting to a time window
+    [earliest_time, latest_time].
+
+    Parameters
+    ----------
+    case_incidence : dict
+        Dictionary keyed by integer deme ID. Each value is a list of 
+        length >= (max day + 1) giving daily incidence counts, e.g.:
+        case_incidence[deme_id][time] => incidence for that deme and day.
+        Each list is of the same length (outbreak duration), and the first day is 0.
+    samples_df : pd.DataFrame
+        A DataFrame of all candidate rows with columns ['sample_id', 'time', 'deme'].
+    time_range : tuple(int, int), optional
+        If provided, only rows with earliest_time <= time <= latest_time are considered.
+        If None, we consider all times present in the data.
+    target_proportion : float, optional
+        Fraction of the total filtered rows we want to sample, if `target_number` is None.
+    target_number : int, optional
+        Desired number of rows to sample. If both are provided and `target_number` is None,
+        we use `target_proportion`.
+    target_demes : list, optional
+        If provided, only rows whose 'deme' is in this list are considered. Otherwise,
+        all demes in `samples_df`.
+
+    Returns
+    -------
+    np.ndarray
+        An integer array of length D (the full outbreak duration). Days outside
+        the chosen `time_range` (if specified) are zero.
+    """
+
+    # Convert keys in case_incidence to int if needed (to stay consistent)
+    case_incidence = {int(deme): cases for deme, cases in case_incidence.items()}
+
+    # Determine the number of days (assuming uniform length)
+    D = len(next(iter(case_incidence.values())))
+
+    # If no target_demes specified, consider them all
+    if target_demes is None:
+        target_demes = list(case_incidence.keys())
+
+    # Filter incidence to target demes
+    target_case_incidence = {deme: case_incidence[deme] for deme in target_demes if deme in case_incidence}
+
+    # If no target demes or empty incidence, return empty or zero allocations
+    if not target_case_incidence:
+        return np.zeros(D, dtype=int)
+
+    # Filter samples by target_demes if provided
+    df = samples_df[samples_df["deme"].isin(target_demes)]
+
+    # If time_range is None, use the entire range [0..D-1]
+    if time_range is None:
+        earliest_time, latest_time = 0, D - 1
+    else:
+        earliest_time, latest_time = time_range
+
+    # Filter samples by sampling time
+    df = df[(df["time"] >= earliest_time) & (df["time"] <= latest_time)]
+
+    # Number of total samples available, given the filters
+    N = df.shape[0]
+    if N == 0:
+        return np.zeros(D, dtype=int)
+
+    # Determine final target_number if needed
+    if target_proportion is not None and target_number is None:
+        target_number = int(target_proportion * N)
+    if target_number is None:
+        raise ValueError("Either 'target_proportion' or 'target_number' must be specified.")
+
+    # Compute daily subrange total samples
+    daily_sub_samples = np.zeros(D, dtype=float)
+    for time, group in df.groupby("time"):
+        daily_sub_samples[time] = group.shape[0]
+
+    # Compute total samples across target demes
+    total_sub_samples = daily_sub_samples.sum()
+
+    # If total samples for this subrange is 0, the subrange gets all zeros
+    if total_sub_samples == 0:
+        return np.zeros(D, dtype=int)
+    
+    # Compute proportional subrange allocation
+    frac_subrange = daily_sub_samples / total_sub_samples
+    day_alloc_sub = np.round(frac_subrange * target_number).astype(int)
+
+    # Create a full array of length D, fill subrange, zeros outside
+    full_allocation = np.zeros(D, dtype=int)
+    full_allocation[earliest_time:latest_time + 1] = day_alloc_sub
+
+    return full_allocation
+    
+
 def uniform_case_temporal_allocation(
         case_incidence: dict,
         samples_df: pd.DataFrame,
@@ -49,6 +153,9 @@ def uniform_case_temporal_allocation(
     # Convert keys in case_incidence to int if needed (to stay consistent)
     case_incidence = {int(deme): cases for deme, cases in case_incidence.items()}
 
+    # Determine the number of days (assuming uniform length)
+    D = len(next(iter(case_incidence.values())))
+
     # If no target_demes specified, consider them all
     if target_demes is None:
         target_demes = list(case_incidence.keys())
@@ -58,10 +165,7 @@ def uniform_case_temporal_allocation(
 
     # If no target demes or empty incidence, return empty or zero allocations
     if not target_case_incidence:
-        return {}
-
-    # Determine the number of days (assuming uniform length)
-    D = len(next(iter(target_case_incidence.values())))
+        return np.zeros(D, dtype=int)
 
     # Filter samples by target_demes if provided
     df = samples_df[samples_df["deme"].isin(target_demes)]
