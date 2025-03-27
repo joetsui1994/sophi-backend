@@ -109,6 +109,4 @@ class InferenceOverviewSerializer(InferenceSerializer):
         return len(previous_samples) + len(sample_ids)
     
     def get_prop_sampled(self, obj):
-        if obj.dta_method is None:
-            return None
-        return obj.evaluations.sampling_props
+        return obj.evaluations['sampling_props'] if obj.evaluations else None
