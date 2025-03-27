@@ -17,6 +17,7 @@ def weighted_spatiotemporal_sampling(
 
       1) 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
       2) 'even': weight = 1 / (# samples in that bin)
+      3) 'samples': weight = 1
 
     Then we draw up to 'target_number' samples without replacement, with probability
     proportional to these weights.
@@ -28,6 +29,7 @@ def weighted_spatiotemporal_sampling(
     weighting_strategy : {'cases', 'even'}, optional; default='cases'
         - 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
         - 'even': weight = 1 / (# samples in that bin)
+        - 'samples': weight = 1
     case_incidence : dict
         Dictionary keyed by integer deme ID. Each value is a list of 
         length >= (max day + 1) giving daily incidence counts, e.g.:
@@ -105,6 +107,10 @@ def weighted_spatiotemporal_sampling(
         elif weighting_strategy == "even":
             # 1 / bin_count
             return 1.0 / row["bin_count"] if row["bin_count"] > 0 else 0.0
+        
+        elif weighting_strategy == "samples":
+            # 1
+            return 1.0
 
     df["weight"] = df.apply(row_weight, axis=1)
 
@@ -155,6 +161,28 @@ def stEV_draw(
     samples_drawn_df = weighted_spatiotemporal_sampling(
         samples_df,
         weighting_strategy="even",
+        time_range=time_range,
+        target_proportion=target_proportion,
+        target_number=target_number,
+        target_demes=target_demes,
+        random_state=random_state
+    )
+
+    return samples_drawn_df
+
+
+def stUS_draw(
+        samples_df: pd.DataFrame,
+        time_range: tuple = None,
+        target_proportion: float = None,
+        target_number: int = None,
+        target_demes: list = None,
+        random_state: int = 42
+    ) -> pd.DataFrame:
+
+    samples_drawn_df = weighted_spatiotemporal_sampling(
+        samples_df,
+        weighting_strategy="samples",
         time_range=time_range,
         target_proportion=target_proportion,
         target_number=target_number,
