@@ -234,7 +234,7 @@ class Simulation(models.Model):
                 children.append({
                     'uuid': child_inference.uuid,
                     'children': collect_children_inferences(child_inference),
-                    'is_dummy': child_inference.samples_allocation is None
+                    'is_dummy': child_inference.dta_method is None
                 })
             return children
 
@@ -242,7 +242,7 @@ class Simulation(models.Model):
         tree_dict = {
             'uuid': root_inference.uuid,
             'children': collect_children_inferences(root_inference),
-            'is_dummy': len(root_inference.sample_ids) == 0
+            'is_dummy': root_inference.dta_method is None
         }
 
         return tree_dict
