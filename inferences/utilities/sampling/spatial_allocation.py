@@ -2,6 +2,84 @@ import pandas as pd
 import numpy as np
 
 
+def uniform_sample_temporal_allocation(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        target_proportion: float = None,
+        target_number: int = None,
+        min_number_per_deme: int = 0,
+        target_demes: list = None
+    ) -> dict:
+    """
+    Allocate a target number (or proportion) of samples to be drawn from each deme in proportion to
+    its total number of samples available across the outbreak.
+
+    Parameters
+    ----------
+    case_incidence : dict
+        Dictionary keyed by integer deme ID. Each value is a list of 
+        length >= (max day + 1) giving daily incidence counts, e.g.:
+        case_incidence[deme_id][time] => incidence for that deme and day.
+        Each list is of the same length (outbreak duration), and the first day is 0.
+    samples_df : pd.DataFrame
+        A DataFrame of all candidate rows with columns ['sample_id', 'time', 'deme'].
+    target_proportion : float, optional
+        Fraction of the total filtered rows we want to sample, if `target_number` is None.
+    target_number : int, optional
+        Desired number of rows to sample. If both are provided and `target_number` is None,
+        we use `target_proportion`.
+    min_number_per_deme : int, optional
+        Minimum number of samples allocated to each deme (applied after rounding).
+    target_demes : list, optional
+        If provided, only rows whose 'deme' is in this list are considered. Otherwise,
+        all demes in `case_incidence`.
+
+    Returns
+    -------
+    dict
+        A dictionary keyed by deme ID, indicating the number of samples allocated 
+        to each.
+    """
+
+    # Convert deme keys in case_incidence to int if needed
+    case_incidence = {int(k): v for k, v in case_incidence.items()}
+
+    # Determine which demes to consider
+    if target_demes is None:
+        target_demes = list(case_incidence.keys())
+
+    # Filter samples by target_demes if provided
+    df = samples_df[samples_df["deme"].isin(target_demes)]
+
+    # Number of total samples available, given the filters
+    N = df.shape[0]
+    if N == 0:
+        return {deme: 0 for deme in target_demes}
+    
+    # Get number of samples available in each deme
+    deme_counts = df["deme"].value_counts().to_dict()
+
+    # Determine final target_number if needed
+    if target_proportion is not None and target_number is None:
+        target_number = int(target_proportion * N)
+    if target_number is None:
+        raise ValueError("Either 'target_proportion' or 'target_number' must be specified.")
+
+    # Compute allocations in proportion to each deme's share of total samples
+    allocated = {}
+    for deme in target_demes:
+        deme_alloc_float = (deme_counts.get(deme, 0) / N) * target_number
+        allocated[deme] = int(round(deme_alloc_float))
+
+    # Enforce a minimum number per deme if requested
+    if min_number_per_deme > 0:
+        for deme in allocated:
+            if allocated[deme] < min_number_per_deme:
+                allocated[deme] = min_number_per_deme
+
+    return allocated
+
+
 def uniform_case_spatial_allocation(
         case_incidence: dict,
         samples_df: pd.DataFrame,
@@ -9,7 +87,7 @@ def uniform_case_spatial_allocation(
         target_number: int = None,
         min_number_per_deme: int = 0,
         target_demes: list = None
-    ) -> list:
+    ) -> dict:
     """
     Allocate a target number (or proportion) of samples to be drawn from each deme in proportion to
     its total incidence across the outbreak.
