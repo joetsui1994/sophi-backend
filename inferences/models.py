@@ -208,7 +208,7 @@ class SamplesAllocation(models.Model):
 
             # Determine the key based on strategies
             strategy_key = (temporal_strategy, spatial_strategy)
-
+            print(strategy_key)
             # Find the corresponding draw function
             draw_function = priority_map.get(strategy_key)
             if not draw_function:

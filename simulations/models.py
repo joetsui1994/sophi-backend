@@ -1,6 +1,7 @@
 from simulations.utilities.traj_process import get_migratory_events, get_case_incidence, get_sampling_times
 from simulations.utilities.tree_process import read_nexus_tree, get_subsampled_tree
 from django.conf import settings
+from django.db.models import Q
 from django.db import models
 import pandas as pd
 import base64
@@ -219,32 +220,44 @@ class Simulation(models.Model):
     
     # method to get inference-tree
     def get_inference_tree(self, user=None):
-        root_inference = self.inference_set.filter(head__isnull=True).prefetch_related('children').first()
-
-        # recursive function to get the tree as a nested dictionary
-        def collect_children_inferences(inference):
-            children_inferences = inference.children.all()
-
-            # if filtering by user, only include children belonging to the same user
-            if user:
-                children_inferences = children_inferences.filter(user=user)
-
-            children = []
-            for child_inference in children_inferences:
-                children.append({
-                    'uuid': child_inference.uuid,
-                    'children': collect_children_inferences(child_inference),
-                    'is_dummy': child_inference.dta_method is None
+        # If a user is provided, include inferences where either the user matches 
+        # or the inference is the root (head is None).
+        qs = self.inference_set.values("id", "uuid", "head_id", "dta_method", "user_id")
+        if user:
+            qs = qs.filter(Q(user=user) | Q(head__isnull=True))
+        
+        # Retrieve all relevant inferences in one query.
+        inferences = list(qs)
+        
+        # Group children by their parent id.
+        children_by_parent = {}
+        for inference in inferences:
+            parent_id = inference['head_id']  # head is None for the root inference.
+            children_by_parent.setdefault(parent_id, []).append(inference)
+        
+        # Find the root inference (head is None).
+        root_inferences = children_by_parent.get(None)
+        if not root_inferences:
+            return None
+        root_inference = root_inferences[0]
+        
+        # Recursive function to build the tree.
+        def build_tree(parent_id):
+            tree = []
+            for node in children_by_parent.get(parent_id, []):
+                tree.append({
+                    'uuid': node["uuid"],
+                    'children': build_tree(node["id"]),
+                    'is_dummy': node["dta_method"] is None,
                 })
-            return children
-
-        # build tree dict
+            return tree
+        
         tree_dict = {
-            'uuid': root_inference.uuid,
-            'children': collect_children_inferences(root_inference),
-            'is_dummy': root_inference.dta_method is None
+            'uuid': root_inference["uuid"],
+            'children': build_tree(root_inference["id"]),
+            'is_dummy': root_inference["dta_method"] is None,
         }
-
+        
         return tree_dict
     
     # method to get the uuid of the  most N recent inferences
