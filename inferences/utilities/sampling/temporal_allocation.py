@@ -8,6 +8,7 @@ def uniform_sample_temporal_allocation(
         time_range: tuple = None,
         target_proportion: float = None,
         target_number: int = None,
+        min_number_per_day: int = 0,
         target_demes: list = None
     ) -> list:
     """
@@ -32,6 +33,8 @@ def uniform_sample_temporal_allocation(
     target_number : int, optional
         Desired number of rows to sample. If both are provided and `target_number` is None,
         we use `target_proportion`.
+    min_number_per_day : int, optional
+        Minimum number of samples allocated per day (applied after rounding).
     target_demes : list, optional
         If provided, only rows whose 'deme' is in this list are considered. Otherwise,
         all demes in `samples_df`.
@@ -98,6 +101,10 @@ def uniform_sample_temporal_allocation(
     # Compute proportional subrange allocation
     frac_subrange = daily_sub_samples / total_sub_samples
     day_alloc_sub = np.round(frac_subrange * target_number).astype(int)
+
+    # Enforce minimum per day (only in the selected subrange)
+    if min_number_per_day > 0:
+        day_alloc_sub = np.maximum(day_alloc_sub, min_number_per_day)
 
     # Create a full array of length D, fill subrange, zeros outside
     full_allocation = np.zeros(D, dtype=int)
