@@ -14,10 +14,40 @@ import uuid
 import os
 
 from inferences.utilities.dta.ph_dta import run_phangorn_dta
-from inferences.utilities.sampling.temporal_prioritised_strategies import tUC_sUC_draw, tUC_sUP_draw, tUC_sEV_draw, tEV_sUC_draw, tEV_sUP_draw, tEV_sEV_draw
-from inferences.utilities.sampling.spatial_prioritised_strategies import sUC_tUC_draw, sUC_tEV_draw, sUC_tEN_draw, sUP_tUC_draw, sUP_tEV_draw, sUP_tEN_draw, sEV_tUC_draw, sEV_tEV_draw, sEV_tEN_draw
+from inferences.utilities.sampling.temporal_prioritised_strategies import (
+    tUS_sUS_draw,
+    tUS_sEV_draw,
+    tUS_sUP_draw,
+    tUS_sUC_draw,
+    tUC_sUS_draw,
+    tUC_sUC_draw,
+    tUC_sUP_draw, 
+    tUC_sEV_draw,
+    tEV_sUS_draw,
+    tEV_sUC_draw,
+    tEV_sUP_draw,
+    tEV_sEV_draw
+)
+from inferences.utilities.sampling.spatial_prioritised_strategies import (
+    sUS_tUS_draw,
+    sUS_tUC_draw,
+    sUS_tEV_draw,
+    sUS_tEN_draw,
+    sUC_tUS_draw,
+    sUC_tUC_draw,
+    sUC_tEV_draw,
+    sUC_tEN_draw,
+    sUP_tUS_draw,
+    sUP_tUC_draw,
+    sUP_tEV_draw,
+    sUP_tEN_draw,
+    sEV_tUS_draw,
+    sEV_tUC_draw,
+    sEV_tEV_draw,
+    sEV_tEN_draw
+)
 from inferences.utilities.sampling.temporal_sampling import earliest_N_temporal_sampling as tEN_draw
-from inferences.utilities.sampling.spatiotemporal_sampling import stUC_draw, stEV_draw
+from inferences.utilities.sampling.spatiotemporal_sampling import stUC_draw, stEV_draw, stUS_draw
 from inferences.utilities.vis_tree.run_d3tree import run_d3tree
 from inferences.utilities.vis_tree.tree_thinning import thin_tree
 
@@ -35,6 +65,7 @@ class SamplesAllocation(models.Model):
     Model to store information about the allocation of samples, including the relevant time frame, sampling strategy, sampling rates, and other relevant details.
     """
     class TemporalStrategies(models.TextChoices):
+        UNIFORM_SAMPLE = "US", _("Uniform allocation in proportion to number of samples")
         UNIFORM_CASE = "UC", _("Uniform allocation in proportion to case incidence")
         INV_UNIFORM_CASE = "IUC", _("Uniform allocation in inverse proportion to case incidence")
         EVEN = "EV", _("Even allocation of samples across time")
@@ -42,6 +73,7 @@ class SamplesAllocation(models.Model):
         LATEST_N = "LN", _("Latest N samples")
     
     class SpatialStrategies(models.TextChoices):
+        UNIFORM_SAMPLE = "US", _("Uniform allocation in proportion to number of samples")
         UNIFORM_CASE = "UC", _("Uniform allocation in proportion to number of cases")
         INV_UNIFORM_CASE = "IUC", _("Uniform allocation in inverse proportion to number of cases")
         UNIFORM_POP = "UP", _("Uniform allocation in proportion to population size")
@@ -128,9 +160,15 @@ class SamplesAllocation(models.Model):
             draw_function_map = {
                 # Temporal-prioritised strategies
                 "T": {
+                    ("US", "US"): tUS_sUS_draw,
+                    ("US", "UC"): tUS_sUC_draw,
+                    ("US", "UP"): tUS_sUP_draw,
+                    ("US", "EV"): tUS_sEV_draw,
+                    ("UC", "US"): tUC_sUS_draw,
                     ("UC", "UC"): tUC_sUC_draw,
                     ("UC", "UP"): tUC_sUP_draw,
                     ("UC", "EV"): tUC_sEV_draw,
+                    ("EV", "US"): tEV_sUS_draw,
                     ("EV", "UC"): tEV_sUC_draw,
                     ("EV", "UP"): tEV_sUP_draw,
                     ("EV", "EV"): tEV_sEV_draw,
@@ -138,18 +176,26 @@ class SamplesAllocation(models.Model):
                 },
                 # Spatial-prioritised strategies
                 "S": {
+                    ("US", "US"): sUS_tUS_draw,
+                    ("UC", "US"): sUS_tUC_draw,
+                    ("EV", "US"): sUS_tEV_draw,
+                    ("EN", "US"): sUS_tEN_draw,
+                    ("US", "UC"): sUC_tUS_draw,
                     ("UC", "UC"): sUC_tUC_draw,
                     ("EV", "UC"): sUC_tEV_draw,
                     ("EN", "UC"): sUC_tEN_draw,
+                    ("US", "UP"): sUP_tUS_draw,
                     ("UC", "UP"): sUP_tUC_draw,
                     ("EV", "UP"): sUP_tEV_draw,
                     ("EN", "UP"): sUP_tEN_draw,
+                    ("US", "EV"): sEV_tUS_draw,
                     ("UC", "EV"): sEV_tUC_draw,
                     ("EV", "EV"): sEV_tEV_draw,
                     ("EN", "EV"): sEV_tEN_draw,
                 },
                 # Joint-prioritised strategies
                 "J": {
+                    ("US", None): stUS_draw,
                     ("UC", None): stUC_draw,
                     ("EV", None): stEV_draw,
                 },
