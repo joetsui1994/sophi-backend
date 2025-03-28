@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def uniform_sample_temporal_allocation(
+def uniform_sample_spatial_allocation(
         case_incidence: dict,
         samples_df: pd.DataFrame,
         target_proportion: float = None,
