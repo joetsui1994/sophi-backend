@@ -260,6 +260,39 @@ def sUC_tEN_draw(
     return samples_drawn_df
 
 
+# (Spatial, Temporal) = (UP, US)
+def sUP_tUS_draw(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        population_sizes: dict,
+        target_proportion: float = None,
+        target_number: int = None,
+        min_number_per_deme: int = 0,
+        target_demes: list = None,
+        random_state: int = 42
+    ) -> pd.DataFrame:
+
+    # Spatial allocation by UP
+    spatial_allocation = uniform_population_spatial_allocation(
+        population_sizes,
+        samples_df,
+        target_proportion=target_proportion,
+        target_number=target_number,
+        min_number_per_deme=min_number_per_deme,
+        target_demes=target_demes
+    )
+
+    # Temporal allocation by US
+    samples_drawn_df = weighted_temporal_sampling(
+        spatial_allocation,
+        samples_df,
+        weighting_strategy="samples",
+        random_state=random_state
+    )
+
+    return samples_drawn_df
+
+
 # (Spatial, Temporal) = (UP, UC)
 def sUP_tUC_draw(
         case_incidence: dict,
