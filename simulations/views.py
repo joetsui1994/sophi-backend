@@ -107,7 +107,10 @@ def get_inference_tree(request, uuid):
     recent_inferences = simulation.get_recent_inferences(user=request.user, N=3)
 
     # get inference queryset and serialize
-    inferences = simulation.inference_set.filter(Q(user=request.user) | Q(head__isnull=True))
+    inferences = (
+        simulation.inference_set.filter(Q(user=request.user) | Q(head__isnull=True))
+        .select_related('samples_allocation', 'head')
+    )
     serializer = InferenceOverviewSerializer(inferences, many=True)
 
     # convert the serializer output from a list to a dictionary with UUIDs as keys
