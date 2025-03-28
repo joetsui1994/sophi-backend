@@ -1,7 +1,103 @@
 import pandas as pd
 
 from inferences.utilities.sampling.temporal_sampling import weighted_temporal_sampling, earliest_N_by_deme_sampling
-from inferences.utilities.sampling.spatial_allocation import uniform_case_spatial_allocation, uniform_population_spatial_allocation, even_spatial_allocation
+from inferences.utilities.sampling.spatial_allocation import uniform_sample_spatial_allocation, uniform_case_spatial_allocation, uniform_population_spatial_allocation, even_spatial_allocation
+
+
+# (Spatial, Temporal) = (US, UC)
+def sUS_tUC_draw(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        target_proportion: float = None,
+        target_number: int = None,
+        min_number_per_deme: int = 0,
+        target_demes: list = None,
+        random_state: int = 42
+    ) -> pd.DataFrame:
+
+    # Spatial allocation by US
+    spatial_allocation = uniform_sample_spatial_allocation(
+        case_incidence,
+        samples_df,
+        target_proportion=target_proportion,
+        target_number=target_number,
+        min_number_per_deme=min_number_per_deme,
+        target_demes=target_demes
+    )
+
+    # Temporal sampling by UC
+    samples_drawn_df = weighted_temporal_sampling(
+        spatial_allocation,
+        samples_df,
+        weighting_strategy="cases",
+        case_incidence=case_incidence,
+        random_state=random_state
+    )
+
+    return samples_drawn_df
+
+
+# (Spatial, Temporal) = (US, EV)
+def sUS_tEV_draw(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        target_proportion: float = None,
+        target_number: int = None,
+        min_number_per_deme: int = 0,
+        target_demes: list = None,
+        random_state: int = 42
+    ) -> pd.DataFrame:
+
+    # Spatial allocation by US
+    spatial_allocation = uniform_sample_spatial_allocation(
+        case_incidence,
+        samples_df,
+        target_proportion=target_proportion,
+        target_number=target_number,
+        min_number_per_deme=min_number_per_deme,
+        target_demes=target_demes
+    )
+
+    # Temporal sampling by EV
+    samples_drawn_df = weighted_temporal_sampling(
+        spatial_allocation,
+        samples_df,
+        weighting_strategy="even",
+        random_state=random_state
+    )
+
+    return samples_drawn_df
+
+
+# (Spatial, Temporal) = (US, EN)
+def sUS_tEN_draw(
+        case_incidence: dict,
+        samples_df: pd.DataFrame,
+        target_proportion: float = None,
+        target_number: int = None,
+        min_number_per_deme: int = 0,
+        target_demes: list = None,
+        random_state: int = 42
+    ) -> pd.DataFrame:
+
+    # Spatial allocation by US
+    spatial_allocation = uniform_sample_spatial_allocation(
+        case_incidence,
+        samples_df,
+        target_proportion=target_proportion,
+        target_number=target_number,
+        min_number_per_deme=min_number_per_deme,
+        target_demes=target_demes
+    )
+
+    # Temporal sampling by EN
+    samples_drawn_df = earliest_N_by_deme_sampling(
+        spatial_allocation,
+        samples_df,
+        random_state=random_state
+    )
+
+    return samples_drawn_df
 
 
 # (Spatial, Temporal) = (UC, UC)
