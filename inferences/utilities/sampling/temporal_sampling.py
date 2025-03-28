@@ -15,6 +15,7 @@ def weighted_temporal_sampling(
 
       1) 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
       2) 'even': weight = 1 / (# samples in that bin)
+      3) 'samples': weight = 1
 
     Then we draw up to 'allocation[deme]' samples without replacement, with probability
     proportional to these weights.
@@ -31,6 +32,7 @@ def weighted_temporal_sampling(
     weighting_strategy : {'cases', 'even'}, optional; default='cases'
         - 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
         - 'even': weight = 1 / (# samples in that bin)
+        - 'samples': weight = 1
     case_incidence : dict
         Dictionary keyed by integer deme ID. Each value is a list of 
         length >= (max day + 1) giving daily incidence counts, e.g.:
@@ -95,6 +97,10 @@ def weighted_temporal_sampling(
         elif weighting_strategy == "even":
             # 1 / bin_count
             deme_subset["weight"] = 1.0 / deme_subset["day_count"]
+
+        elif weighting_strategy == "samples":
+            # 1
+            deme_subset["weight"] = 1.0
 
         # Sum of weights
         total_weight = deme_subset["weight"].sum()
