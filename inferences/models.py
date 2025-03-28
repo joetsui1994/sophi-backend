@@ -237,6 +237,14 @@ def upload_inferred_tree_file_path(instance, filename):
 def generate_random_seed():
     return random.randint(0, 2**31 - 1)
 
+# Function to compute depth of an inference
+def get_inference_depth(instance):
+    depth = 0
+    while inference.head is not None:
+        depth += 1
+        inference = inference.head
+    return depth
+
 # Model for phylogeographic inference given samples
 class Inference(models.Model):
     """
@@ -261,6 +269,7 @@ class Inference(models.Model):
     dta_method = models.CharField(max_length=2, choices=DTAInferenceMethods.choices, blank=True, null=True)
     inferred_tree_file = models.FileField(upload_to=upload_inferred_tree_file_path) # inferred tree file
     head = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='children') # previous inference used for iterative inference
+    depth = models.PositiveIntegerField(null=True, blank=True) # depth of the inference in the chain
     note = models.CharField(max_length=300, blank=True, null=True) # note for the inference
     simulation = models.ForeignKey('simulations.Simulation', on_delete=models.CASCADE, blank=False, null=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
@@ -294,9 +303,25 @@ class Inference(models.Model):
     
     # method to get the depth of the inference in the chain
     def get_depth(self):
-        if self.head:
-            return self.head.get_depth() + 1
+        depth = 0
+        current = self.head
+        while current:
+            depth += 1
+            current = current.head
         return 0
+    
+    @property
+    def depth(self):
+        """
+        Return the stored depth_field if available.
+        If it's None, compute it, store it, and then return it.
+        """
+        if self.depth is None:
+            new_depth = self.get_depth()
+            self.depth = new_depth
+            self.save(update_fields=["depth"])
+            return new_depth
+        return self.depth
 
     # method to collect all sample IDs from previous inferences (not including the current one)
     def get_previous_samples(self):
