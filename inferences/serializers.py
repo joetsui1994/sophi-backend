@@ -67,8 +67,6 @@ class InferenceSimpleSerializer(InferenceSerializer):
 class InferenceOverviewSerializer(InferenceSerializer):
     is_user_owner = serializers.SerializerMethodField()
     head_uuid = serializers.SerializerMethodField()
-    depth = serializers.SerializerMethodField()
-    num_samples = serializers.SerializerMethodField()
     prop_sampled = serializers.SerializerMethodField()
     samples_allocation = SamplesAllocationSerializer(read_only=True)
 
@@ -78,7 +76,6 @@ class InferenceOverviewSerializer(InferenceSerializer):
             'created_at',
             'dta_method',
             'depth',
-            'num_samples',
             'prop_sampled',
             'samples_allocation',
             'head_uuid',
@@ -94,19 +91,7 @@ class InferenceOverviewSerializer(InferenceSerializer):
         return bool(request and hasattr(request, 'user') and request.user == obj.user)
 
     def get_head_uuid(self, obj):
-        if obj.head:
-            return obj.head.uuid
-        return None
-    
-    def get_depth(self, obj):
-        return obj.get_depth()
-
-    def get_num_samples(self, obj):
-        if obj.dta_method is None:
-            return None
-        previous_samples = obj.get_previous_samples() or []  # Ensure iterable
-        sample_ids = obj.sample_ids or []  # Ensure iterable
-        return len(previous_samples) + len(sample_ids)
+        return obj.head.uuid if obj.head else None
     
     def get_prop_sampled(self, obj):
         return obj.evaluations['sampling_props'] if obj.evaluations else None
