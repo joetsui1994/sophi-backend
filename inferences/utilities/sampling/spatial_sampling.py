@@ -18,6 +18,7 @@ def weighted_spatial_sampling(
       1) 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
       2) 'even': weight = 1 / (# samples in that bin)
       3) 'population': weight = population_sizes[deme] / (# samples in that bin)
+      4) 'samples': weight = 1
 
     Then we draw up to 'day_allocation[day]' samples without replacement, with probability
     proportional to these weights.
@@ -43,6 +44,7 @@ def weighted_spatial_sampling(
         - 'cases': weight = case_incidence[deme][time] / (# samples in that bin)
         - 'even': weight = 1 / (# samples in that bin)
         - 'population': weight = population_sizes[deme] / (# samples in that bin)
+        - 'samples': weight = 1
     random_state : int, optional
         Seed for reproducible sampling. Default=42.
 
@@ -127,6 +129,10 @@ def weighted_spatial_sampling(
 
             # Weight per sample = population / number_of_samples_in_that_deme
             day_subset["weight"] = day_subset["deme_population"] / day_subset["deme_count"]
+
+        elif weighting_strategy == "samples":
+            # 1
+            day_subset["weight"] = 1.0
 
         # Sum of weights
         total_weight = day_subset["weight"].sum()
