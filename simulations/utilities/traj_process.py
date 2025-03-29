@@ -46,6 +46,13 @@ def get_case_incidence(trajs_file: str, format: str = 'dataframe'):
     # filter for I and compute compute differences in value
     trajs = trajs[trajs.population == 'I'].drop(columns=['population'])
 
+    # sort the DataFrame by time.
+    trajs = trajs.sort_values('t')
+
+    # compute the difference in 'value' over the entire dataset,
+    # grouped by 'index' (i.e. per deme).
+    trajs['value_diff'] = trajs.groupby('index')['value'].diff()
+
     # handle initial cases (t=0) separately
     initial_cases = trajs[trajs.t == 0].copy()
     initial_cases = (initial_cases.groupby(['t', 'index'])
@@ -53,9 +60,8 @@ def get_case_incidence(trajs_file: str, format: str = 'dataframe'):
                      .reset_index()
                      .rename(columns={'index': 'deme', 'value': 'new_cases'}))
     
-    # for t > 0, compute differences in value to identify new cases
+    # for t > 0, use the pre-computed differences.
     trajs_later = trajs[trajs.t > 0].copy()
-    trajs_later['value_diff'] = trajs_later.groupby('index')['value'].diff()
 
     # filter for valid incidence changes (i.e. sum(value_diff) == 1)
     valid_times = trajs_later.groupby('t')['value_diff'].transform('sum') == 1
