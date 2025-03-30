@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import User
@@ -261,13 +262,22 @@ class Inference(models.Model):
     dta_method = models.CharField(max_length=2, choices=DTAInferenceMethods.choices, blank=True, null=True)
     inferred_tree_file = models.FileField(upload_to=upload_inferred_tree_file_path) # inferred tree file
     head = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='children') # previous inference used for iterative inference
-    depth_field = models.PositiveIntegerField(null=True, blank=True) # depth of the inference in the chain
+    inference_chain = ArrayField(models.UUIDField(), blank=True, null=True) # list of UUIDs of all inferences in the chain, from root to current
     note = models.CharField(max_length=300, blank=True, null=True) # note for the inference
     simulation = models.ForeignKey('simulations.Simulation', on_delete=models.CASCADE, blank=False, null=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     status = models.CharField(max_length=10, choices=StatusChoices.choices, default=StatusChoices.PENDING)
     evaluations = models.JSONField(blank=True, null=True) # evaluation metrics for the inference
     random_seed = models.PositiveIntegerField(default=generate_random_seed, blank=True, null=True) # random seed for reproducibility
+
+    def save(self, *args, **kwargs):
+        if self.head is None:
+            self.inference_chain = [self.uuid]
+        else:
+            # Take parent's chain and append this node's uuid
+            self.inference_chain = self.head.inference_chain + [self.uuid]
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.uuid
@@ -286,31 +296,13 @@ class Inference(models.Model):
 
         # Proceed with saving if validation passes
         super().save(*args, **kwargs)
-
-    # method to trace back to the first inference in the chain
-    def get_root_head(self):
-        if self.head:
-            return self.head.get_root_head()
-        return self
-    
-    # method to get the depth of the inference in the chain
-    def compute_depth(self):
-        depth = 0
-        current = self.head
-        while current:
-            depth += 1
-            current = current.head
-        return depth
-    
+        
     @property
     def depth(self):
-        if self.depth_field is None:
-            computed = self.compute_depth()
-            self.depth_field = computed
-            self.save(update_fields=["depth_field"])
-            return computed
-        return self.depth_field
-
+        if not self.inference_chain:
+            return 0
+        return len(self.inference_chain) - 1
+    
     # method to collect all sample IDs from previous inferences (not including the current one)
     def get_previous_samples(self):
         previous_samples = []
