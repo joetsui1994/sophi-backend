@@ -156,3 +156,20 @@ def get_inference_data(request, uuid):
     
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_inference(request, uuid):
+    inference = get_object_or_404(Inference, uuid=uuid)
+    
+    # Check if inference belongs to user
+    if inference.user != request.user:
+        return Response({'error': 'Not authorized to delete this inference'}, status=403)
+        
+    # Check if inference status allows deletion
+    if inference.status not in [Inference.StatusChoices.SUCCESS, Inference.StatusChoices.FAILED]:
+        return Response({'error': 'Can only delete completed or failed inferences'}, status=400)
+        
+    inference.delete()
+    return Response(status=204)
