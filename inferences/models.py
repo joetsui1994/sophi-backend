@@ -270,15 +270,6 @@ class Inference(models.Model):
     evaluations = models.JSONField(blank=True, null=True) # evaluation metrics for the inference
     random_seed = models.PositiveIntegerField(default=generate_random_seed, blank=True, null=True) # random seed for reproducibility
 
-    def save(self, *args, **kwargs):
-        if self.head is None:
-            self.inference_chain = [self.uuid]
-        else:
-            # Take parent's chain and append this node's uuid
-            self.inference_chain = self.head.inference_chain + [self.uuid]
-
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.uuid
     
@@ -293,6 +284,13 @@ class Inference(models.Model):
             # if updating an existing instance, ensure that we are not introducing a second head=None
             if self.head is None and Inference.objects.exclude(pk=self.pk).filter(simulation=self.simulation, head__isnull=True).exists():
                 raise ValidationError("Only one root inference is allowed.")
+
+        # populate inference_chain
+        if self.head is None:
+            self.inference_chain = [self.uuid]
+        else:
+            # Take parent's chain and append this node's uuid
+            self.inference_chain = self.head.inference_chain + [self.uuid]
 
         # Proceed with saving if validation passes
         super().save(*args, **kwargs)
