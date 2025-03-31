@@ -171,5 +171,13 @@ def delete_inference(request, uuid):
     if inference.status not in [Inference.StatusChoices.SUCCESS, Inference.StatusChoices.FAILED]:
         return Response({'error': 'Can only delete completed or failed inferences'}, status=400)
         
+    # Check if there are any pending or running inferences that are descendants of this inference
+    protected_downstream_inferences = Inference.objects.filter(
+        status__in=[Inference.StatusChoices.PENDING, Inference.StatusChoices.RUNNING],
+        inference_chain__contains=[inference.uuid])
+    if protected_downstream_inferences.exists():
+        return Response({'error': 'Cannot delete this inference because it has pending or running descendants'}, status=400)
+
+    # Delete the inference
     inference.delete()
     return Response(status=204)
