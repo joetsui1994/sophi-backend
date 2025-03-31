@@ -173,8 +173,10 @@ def delete_inference(request, uuid):
         
     # Check if there are any pending or running inferences that are descendants of this inference
     protected_downstream_inferences = Inference.objects.filter(
+        simulation=inference.simulation,
         status__in=[Inference.StatusChoices.PENDING, Inference.StatusChoices.RUNNING],
         inference_chain__contains=[inference.uuid])
+
     if protected_downstream_inferences.exists():
         return Response({'error': 'Cannot delete this inference because it has pending or running descendants'}, status=400)
 
