@@ -1,5 +1,6 @@
 from simulations.utilities.traj_process import get_migratory_events, get_case_incidence, get_sampling_times
 from simulations.utilities.tree_process import read_nexus_tree, get_subsampled_tree
+from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
 from django.db.models import Q
 from django.db import models
@@ -55,6 +56,7 @@ class Simulation(models.Model):
     sampled_tree_file = models.FileField(upload_to=upload_sampled_tree_file_path) # sampled and annotated tree
     epi_params_file = models.FileField(upload_to=upload_epi_params_file_path) # Epidemiological parameters file
     xml_file = models.FileField(upload_to=upload_xml_file_path) # BEAST XML file
+    keywords = ArrayField(models.CharField(max_length=50), default=list, blank=True) # List of keywords (e.g., tutorial, SIR, SEIR, SIRS, etc.)
     is_complete = models.BooleanField(default=False) # flag to indicate whether all required fields have been populated
 
     def __str__(self):
@@ -79,6 +81,18 @@ class Simulation(models.Model):
     # method to get total number of sampled individuals in each deme
     def get_deme_sampled(self):
         return {deme: sum(sampling_times) for deme, sampling_times in self.sampling_times.items()}
+
+    # method to add a keyword to the list of keywords
+    def add_keyword(self, keyword):
+        if keyword not in self.keywords:
+            self.keywords.append(keyword)
+            self.save()
+
+    # method to remove a keyword from the list of keywords
+    def remove_keyword(self, keyword):
+        if keyword in self.keywords:
+            self.keywords.remove(keyword)
+            self.save()
 
     # method to populate epi_params from epi_params_file
     def populate_epi_params(self):
