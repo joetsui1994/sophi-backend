@@ -45,7 +45,11 @@ class SimulationRepository(APIView, CustomSetPagination):
 
         # apply search filter if search parameter exists
         if search:
-            simulation_queryset = simulation_queryset.filter(uuid__startswith=search)
+            if search.startswith('#'):
+                search = search[1:]  # remove the hash
+                simulation_queryset = simulation_queryset.filter(uuid__startswith=search)
+            else:
+                simulation_queryset = simulation_queryset.filter(keywords__overlap=[search])
 
         # apply ordering if valid
         if ordering in allowed_ordering_fields:
