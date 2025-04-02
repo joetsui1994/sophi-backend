@@ -131,6 +131,7 @@ def get_inference_data(request, uuid):
         return Response({
             'uuid': uuid,
             'head_uuid': inference.head.uuid if inference.head else None,
+            'inference_chain': inference.inference_chain,
             'inferred_tree': inferred_tree_json,
             'inferred_migratory_events': inferred_migratory_events,
             'inferred_root': {
