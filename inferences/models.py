@@ -255,7 +255,7 @@ class Inference(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=8, default=generate_short_uuid, unique=True, editable=False)
-    samples_allocation = models.OneToOneField(SamplesAllocation, on_delete=models.CASCADE, blank=True, null=True)
+    samples_allocation = models.ForeignKey(SamplesAllocation, on_delete=models.CASCADE, blank=True, null=True)
     sample_ids = models.JSONField(blank=True, null=True) # IDs of samples used for inference
     inferred_migratory_events = models.JSONField(blank=True, null=True) # inferred migratory events
     inferred_tree_json = models.JSONField(blank=True, null=True) # inferred tree in JSON (nodes/links) format
