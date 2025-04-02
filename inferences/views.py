@@ -41,29 +41,31 @@ class InferenceSubmission(APIView):
         # Fetch the specified head inference
         head_inference = get_object_or_404(Inference, uuid=head_uuid, simulation=simulation)
 
-        # Validate inference specs using the serializer
-        inference_serializer = InferenceSerializer(data={
-            "simulation": simulation.uuid,
-            "samples_allocation": samples_allocation.id if samples_allocation else None,
-            "head": head_inference.id,
-            "dta_method": inference_specs.get("dta_method"),
-            "note": inference_specs.get("note"),
-            "status": Inference.StatusChoices.PENDING if samples_allocation else Inference.StatusChoices.SUCCESS,
-            "random_seed": inference_specs.get("random_seed", None)
-        }, context={"request": request})
+        # Get replicate_num (defaults to 1)
+        replicate_num = inference_specs.get("replicate_num", 1)
+        if replicate_num < 1:
+            return Response({"error": "'replicate_num' must be >= 1."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not inference_serializer.is_valid():            
-            return Response(inference_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        for _ in range(replicate_num):
+            inference_serializer = InferenceSerializer(data={
+                "simulation": simulation.uuid,
+                "samples_allocation": samples_allocation.id if samples_allocation else None,
+                "head": head_inference.id,
+                "dta_method": inference_specs.get("dta_method"),
+                "note": inference_specs.get("note"),
+                "status": Inference.StatusChoices.PENDING if samples_allocation else Inference.StatusChoices.SUCCESS,
+                "random_seed": inference_specs.get("random_seed", None)
+            }, context={"request": request})
 
-        # Save the validated Inference object
-        inference = inference_serializer.save()
+            if not inference_serializer.is_valid():            
+                return Response(inference_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Run the inference asynchronously only if sampling specs are provided
-        if samples_allocation:
-            run_inference.delay(inference.id)
-        # inference.status = Inference.StatusChoices.RUNNING
-        # inference.save()
-        # inference.run_inference()
+            # Save the validated Inference object
+            inference = inference_serializer.save()
+
+            # Run the inference asynchronously only if sampling specs are provided
+            if samples_allocation:
+                run_inference.delay(inference.id)
 
         # Return the created inference
         return Response({"message": "Inference created successfully.",}, status=status.HTTP_201_CREATED)
