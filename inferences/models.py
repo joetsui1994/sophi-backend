@@ -115,9 +115,8 @@ class SamplesAllocation(models.Model):
         self.target_number = number
         self.target_proportion = None
     
-    def draw_samples(self, random_state=42):
+    def draw_samples(self, simulation, random_state=42):
         # Get associated simulation and required data
-        simulation = self.inference.simulation
         case_incidence = simulation.case_incidence
         population_sizes = simulation.populations
         samples_df = simulation.get_samples(by_day=True)
@@ -199,6 +198,7 @@ class SamplesAllocation(models.Model):
                     ("US", None): stUS_draw,
                     ("UC", None): stUC_draw,
                     ("EV", None): stEV_draw,
+                    ("EN", None): tEN_draw,  # Earliest-N temporal sampling
                 },
             }
 
@@ -494,7 +494,7 @@ class Inference(models.Model):
             raise ValueError("No samples allocation provided for inference.")
         
         # Draw samples from simulation based on the allocation
-        samples_df = self.samples_allocation.draw_samples(random_state=random_state)
+        samples_df = self.samples_allocation.draw_samples(self.simulation, random_state=random_state)
 
         # Get all sample IDs from previous inferences
         previous_samples = self.get_previous_samples()
