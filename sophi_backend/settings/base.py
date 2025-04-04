@@ -76,21 +76,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-
-CORS_ALLOWED_ORIGINS = [
-    "https://sophi-oxf.io",
-]
-
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Default authentication
 ]
 
 AUTH_USER_MODEL = 'auth.User'  # Use the default user model
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://sophi-oxf.io",
-]
 
 ROOT_URLCONF = 'sophi_backend.urls'
 
