@@ -88,6 +88,10 @@ AUTHENTICATION_BACKENDS = [
 
 AUTH_USER_MODEL = 'auth.User'  # Use the default user model
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://sophi-oxf.io",
+]
+
 ROOT_URLCONF = 'sophi_backend.urls'
 
 TEMPLATES = [

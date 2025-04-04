@@ -1,7 +1,7 @@
 from .base import *
 
 DEBUG = False
-ALLOWED_HOSTS = ["139.59.166.206", "sophi-oxf.io", "www.sophi-oxf.io"]
+ALLOWED_HOSTS = ["139.59.166.206", "sophi-oxf.io", "www.sophi-oxf.io", "api.sophi-oxf.io"]
 MEDIA_ROOT = "/root/simulations"
 
 # Security settings
