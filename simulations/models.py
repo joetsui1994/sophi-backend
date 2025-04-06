@@ -262,14 +262,14 @@ class Simulation(models.Model):
                 tree.append({
                     'uuid': node["uuid"],
                     'children': build_tree(node["id"]),
-                    'is_dummy': node["dta_method"] is None,
+                    'is_checkpoint': node["dta_method"] is None,
                 })
             return tree
         
         tree_dict = {
             'uuid': root_inference["uuid"],
             'children': build_tree(root_inference["id"]),
-            'is_dummy': root_inference["dta_method"] is None,
+            'is_checkpoint': root_inference["dta_method"] is None,
         }
         
         return tree_dict

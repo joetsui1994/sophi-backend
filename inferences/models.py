@@ -437,12 +437,12 @@ class Inference(models.Model):
         return current_results, previous_results, remaining_results
     
     def calculate_samples_per_deme(self, include_all=True, proportion=False):
-        # Check for dummy inference
+        # Check for checkpoint
         if self.dta_method is None:
-            dummy_output = {deme: 0 for deme in range(self.simulation.num_demes)}
+            checkpoint_output = {deme: 0 for deme in range(self.simulation.num_demes)}
             if include_all:
-                dummy_output['all'] = 0
-            return dummy_output
+                checkpoint_output['all'] = 0
+            return checkpoint_output
 
         # Get previous and current samples
         previous_samples = self.get_previous_samples() or []
