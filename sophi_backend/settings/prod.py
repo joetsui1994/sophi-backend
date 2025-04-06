@@ -2,7 +2,7 @@ from .base import *
 
 DEBUG = False
 ALLOWED_HOSTS = ["139.59.166.206", "sophi-oxf.io", "www.sophi-oxf.io", "api.sophi-oxf.io"]
-MEDIA_ROOT = "/root/simulations"
+MEDIA_ROOT = "/root/sophi-data"
 
 CORS_ALLOW_CREDENTIALS = True
 
