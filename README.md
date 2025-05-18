@@ -32,7 +32,7 @@ This project powers the server-side of SOPHI, providing endpoints for managing s
 1. **Clone the repository**
 
     ```bash
-    git clone https://github.com/yourusername/sophi-backend.git
+    git clone https://github.com/joetsui1994/sophi-backend.git
     cd sophi-backend
     ```
 
@@ -77,8 +77,10 @@ This project powers the server-side of SOPHI, providing endpoints for managing s
 
     Then start Celery in a new terminal:
     ```bash
-    celery -A sophi_backend worker -l info
+    celery -A sophi_backend worker --pool=solo --loglevel=info
     ```
+
+    Note that ```--pool=solo``` is needed for running on Mac systems.
 
 7. **Run the Django development server**
 
@@ -106,7 +108,7 @@ You can see sample development/production settings in `settings/dev.py` and `set
 - For production, use **gunicorn** (or another WSGI server) behind **nginx**.
 - Make sure to run `python manage.py collectstatic` before deployment.
 - For CORS and CSRF configuration, refer to `settings/prod.py`.
-- Celery and Redis must be running for background processing.
+- Celery and Redis must be running for inference processing.
 
 ---
 
