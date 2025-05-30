@@ -33,6 +33,7 @@ class SimulationSerializer(DynamicFieldsModelSerializer):
             'uuid',
             'description',
             'created_at',
+            'keywords',
             'gamma',
             'num_demes',
             'duration_days',

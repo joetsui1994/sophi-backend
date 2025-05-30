@@ -84,6 +84,7 @@ def get_simulation_data(request, uuid):
             'name',
             'description',
             'created_at',
+            'keywords',
             'num_demes',
             'duration_days',
             'populations',
