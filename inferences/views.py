@@ -1,6 +1,7 @@
 from .serializers import SamplesAllocationSerializer, InferenceSerializer
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from simulations.models import Simulation
@@ -11,6 +12,41 @@ from .models import Inference
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# Custom permission to allow unauthenticated access for demo simulations
+class AllowUnauthenticatedForDemo(BasePermission):
+    """
+    Custom permission to allow unauthenticated access for demo simulations
+    """
+    def has_permission(self, request, view):
+        # Extract simulation UUID from the URL or request data
+        simulation_uuid = None
+        
+        # For inference deletion, you might need to get simulation UUID from the inference
+        if 'inference_uuid' in view.kwargs:
+            try:
+                from .models import Inference  # Adjust import
+                inference = Inference.objects.get(uuid=view.kwargs['inference_uuid'])
+                simulation_uuid = inference.simulation.uuid
+            except Inference.DoesNotExist:
+                return False
+        
+        # For direct simulation access
+        elif 'simulation_uuid' in view.kwargs:
+            simulation_uuid = view.kwargs['simulation_uuid']
+        
+        if simulation_uuid:
+            try:
+                simulation = Simulation.objects.get(uuid=simulation_uuid)
+                # If it's a demo simulation, allow access regardless of authentication
+                if 'demo' in simulation.keywords:
+                    return True
+            except Simulation.DoesNotExist:
+                return False
+        
+        # For non-demo simulations, require authentication
+        return request.user and request.user.is_authenticated
 
 
 class InferenceSubmission(APIView):
@@ -100,13 +136,9 @@ def run_inference(inference_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
-def get_inference_data(request, uuid):
-    inference = get_object_or_404(Inference, uuid=uuid)
-
-    # check if the inference belongs to the current user, if head is not None (not a root inference)
-    if inference.head is not None and inference.user != request.user:
-        return Response({"error": "You do not have permission to access this inference."}, status=status.HTTP_403_FORBIDDEN)
+@permission_classes([AllowUnauthenticatedForDemo]) # Ensure only authenticated users can access this view
+def get_inference_data(request, inference_uuid):
+    inference = get_object_or_404(Inference, uuid=inference_uuid)
 
     try:
         # get inferred (annotated) tree json
@@ -131,7 +163,7 @@ def get_inference_data(request, uuid):
         total_sample_num = sum(total_current_samples) + sum(total_previous_samples)
 
         return Response({
-            'uuid': uuid,
+            'uuid': inference_uuid,
             'head_uuid': inference.head.uuid if inference.head else None,
             'inference_chain': inference.inference_chain,
             'inferred_tree': inferred_tree_json,
