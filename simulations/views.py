@@ -145,8 +145,8 @@ def get_simulation_data(request, simulation_uuid):
 def get_inference_tree(request, simulation_uuid):
     simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
-    # get user
-    request_user = request.user if request.user.is_authenticated else None
+    # get user if simulation is not a demo simulation
+    request_user = request.user if request.user.is_authenticated and 'demo' not in simulation.keywords else None
     # get inference tree
     inference_tree = simulation.get_inference_tree(user=request_user)
     # get UUID of most recent 3 inferences
