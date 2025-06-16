@@ -11,8 +11,6 @@ from django.conf import settings
 from .models import Simulation
 from django.db.models import Q
 
-from rest_framework.exceptions import PermissionDenied
-
 
 # Custom permission to allow unauthenticated access for demo simulations
 class AllowUnauthenticatedForDemo(BasePermission):
