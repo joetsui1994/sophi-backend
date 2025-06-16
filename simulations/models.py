@@ -56,7 +56,7 @@ class Simulation(models.Model):
     sampled_tree_file = models.FileField(upload_to=upload_sampled_tree_file_path) # sampled and annotated tree
     epi_params_file = models.FileField(upload_to=upload_epi_params_file_path) # Epidemiological parameters file
     xml_file = models.FileField(upload_to=upload_xml_file_path) # BEAST XML file
-    keywords = ArrayField(models.CharField(max_length=50), default=list, blank=True) # List of keywords (e.g., tutorial, SIR, SEIR, SIRS, etc.)
+    keywords = ArrayField(models.CharField(max_length=50), default=list, blank=True) # List of keywords (e.g., demo, SIR, SEIR, SIRS, etc.)
     is_complete = models.BooleanField(default=False) # flag to indicate whether all required fields have been populated
 
     def __str__(self):

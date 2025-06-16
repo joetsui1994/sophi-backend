@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from inferences.serializers import InferenceOverviewSerializer
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import BasePermission
 from django.shortcuts import get_object_or_404
 from .serializers import SimulationSerializer
 from rest_framework.response import Response
@@ -9,6 +10,43 @@ from rest_framework.views import APIView
 from django.conf import settings
 from .models import Simulation
 from django.db.models import Q
+
+from rest_framework.exceptions import PermissionDenied
+
+
+# Custom permission to allow unauthenticated access for demo simulations
+class AllowUnauthenticatedForDemo(BasePermission):
+    """
+    Custom permission to allow unauthenticated access for demo simulations
+    """
+    def has_permission(self, request, view):
+        # Extract simulation UUID from the URL or request data
+        simulation_uuid = None
+        
+        # For inference deletion, you might need to get simulation UUID from the inference
+        if 'inference_uuid' in view.kwargs:
+            try:
+                from .models import Inference  # Adjust import
+                inference = Inference.objects.get(uuid=view.kwargs['inference_uuid'])
+                simulation_uuid = inference.simulation.uuid
+            except Inference.DoesNotExist:
+                return False
+        
+        # For direct simulation access
+        elif 'simulation_uuid' in view.kwargs:
+            simulation_uuid = view.kwargs['simulation_uuid']
+        
+        if simulation_uuid:
+            try:
+                simulation = Simulation.objects.get(uuid=simulation_uuid)
+                # If it's a demo simulation, allow access regardless of authentication
+                if 'demo' in simulation.keywords:
+                    return True
+            except Simulation.DoesNotExist:
+                return False
+        
+        # For non-demo simulations, require authentication
+        return request.user and request.user.is_authenticated
 
 
 class CustomSetPagination(PageNumberPagination):
@@ -76,11 +114,12 @@ class SimulationRepository(APIView, CustomSetPagination):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Allow access to anyone
-def get_simulation_data(request, uuid):    
-    simulation = get_object_or_404(Simulation, uuid=uuid)
+def get_simulation_data(request, simulation_uuid):    
+    simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
     serializer = SimulationSerializer(
         simulation,
-        fields=('uuid',
+        fields=(
+            'uuid',
             'name',
             'description',
             'created_at',
@@ -102,18 +141,20 @@ def get_simulation_data(request, uuid):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
-def get_inference_tree(request, uuid):    
-    simulation = get_object_or_404(Simulation, uuid=uuid)
+@permission_classes([AllowUnauthenticatedForDemo]) # Ensure only authenticated users can access this view
+def get_inference_tree(request, simulation_uuid):
+    simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
+    # get user
+    request_user = request.user if request.user.is_authenticated else None
     # get inference tree
-    inference_tree = simulation.get_inference_tree(user=request.user)
+    inference_tree = simulation.get_inference_tree(user=request_user)
     # get UUID of most recent 3 inferences
-    recent_inferences = simulation.get_recent_inferences(user=request.user, N=3)
+    recent_inferences = simulation.get_recent_inferences(user=request_user, N=3)
 
     # get inference queryset and serialize
     inferences = (
-        simulation.inference_set.filter(Q(user=request.user) | Q(head__isnull=True))
+        simulation.inference_set.filter(Q(user=request_user) | Q(head__isnull=True))
         .select_related('samples_allocation', 'head')
     )
     serializer = InferenceOverviewSerializer(inferences, many=True)
@@ -122,7 +163,7 @@ def get_inference_tree(request, uuid):
     inferences_dict = { item['uuid']: item for item in serializer.data }
 
     return Response({
-        'simulation_uuid': uuid,
+        'simulation_uuid': simulation_uuid,
         'tree': inference_tree,
         'recent_inferences': recent_inferences,
         'inferences': inferences_dict
@@ -130,8 +171,8 @@ def get_inference_tree(request, uuid):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
-def get_migratory_event_counts(request, uuid):
-    simulation = get_object_or_404(Simulation, uuid=uuid)
+def get_migratory_event_counts(request, simulation_uuid):
+    simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
     # get request params (deme, deme_pair, show_importation)
     deme = request.query_params.get('deme', None)
@@ -177,7 +218,7 @@ def get_migratory_event_counts(request, uuid):
                 event_type='import' if show_importation else 'export')[int(deme)]
             
     return Response({
-        'simulation_uuid': uuid,
+        'simulation_uuid': simulation_uuid,
         'event_type': 'transfer' if deme_pair is not None else 'import' if show_importation else 'export',
         'demes': list(map(int, deme_pair.split('-'))) if deme_pair is not None else [int(deme)] if deme is not None else None,
         'migratory_event_counts_ra': migratory_event_counts_ra,
@@ -188,12 +229,12 @@ def get_migratory_event_counts(request, uuid):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
-def get_earliest_introductions(request, uuid):
-    simulation = get_object_or_404(Simulation, uuid=uuid)
+def get_earliest_introductions(request, simulation_uuid):
+    simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
     # get earliest importation events for each deme
     earliest_introductions = simulation.get_earliest_importation()
     return Response({
-        'simulation_uuid': uuid,
+        'simulation_uuid': simulation_uuid,
         'earliest_introductions': earliest_introductions
     })
