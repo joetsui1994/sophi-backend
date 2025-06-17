@@ -168,7 +168,7 @@ def get_inference_tree(request, simulation_uuid):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
+@permission_classes([AllowUnauthenticatedForDemo]) # Ensure only authenticated users can access this view
 def get_migratory_event_counts(request, simulation_uuid):
     simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
@@ -226,7 +226,7 @@ def get_migratory_event_counts(request, simulation_uuid):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) # Ensure only authenticated users can access this view
+@permission_classes([AllowUnauthenticatedForDemo]) # Ensure only authenticated users can access this view
 def get_earliest_introductions(request, simulation_uuid):
     simulation = get_object_or_404(Simulation, uuid=simulation_uuid)
 
