@@ -195,8 +195,8 @@ def get_inference_data(request, inference_uuid):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_inference(request, uuid):
-    inference = get_object_or_404(Inference, uuid=uuid)
+def delete_inference(request, inference_uuid):
+    inference = get_object_or_404(Inference, uuid=inference_uuid)
     
     # Check if inference belongs to user
     if inference.user != request.user:
